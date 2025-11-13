@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
+"""
+PTPanel Database Initialization Script
+"""
 import sys
 import os
 import logging
 
+# Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core.database import db_manager
@@ -10,12 +14,12 @@ from models.db_models import Admin, Account, PhishingResult, StolenFile, Service
 from core.security import hash_password
 from config import config
 
+# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def create_default_admin():
-    from core.database import db_manager
-    
+    """Create default admin user"""
     session = db_manager.get_session()
     try:
         admin = session.query(Admin).filter(Admin.username == config.admin.username).first()
@@ -40,8 +44,7 @@ def create_default_admin():
         session.close()
 
 def create_default_services():
-    from core.database import db_manager
-    
+    """Create default service entries"""
     session = db_manager.get_session()
     try:
         services = [
@@ -66,15 +69,19 @@ def create_default_services():
         session.close()
 
 def main():
+    """Initialize database with default data"""
     try:
         logger.info("🔄 Initializing PTPanel database...")
         
+        # Create tables
         db_manager.create_tables()
         logger.info("✅ Database tables created successfully")
         
+        # Create default admin
         if not create_default_admin():
             sys.exit(1)
         
+        # Create default services
         create_default_services()
         
         logger.info("🎉 PTPanel database initialization completed successfully")

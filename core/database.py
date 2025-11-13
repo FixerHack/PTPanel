@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 Base = declarative_base()
 
 class DatabaseManager:
+    """Manager for database operations"""
+    
     def __init__(self):
         self.engine = create_engine(
             config.db.url,
@@ -20,9 +22,11 @@ class DatabaseManager:
         self.Session = scoped_session(self.session_factory)
     
     def get_session(self):
+        """Get database session"""
         return self.Session()
     
     def create_tables(self):
+        """Create all tables"""
         try:
             Base.metadata.create_all(bind=self.engine)
             logger.info("Database tables created successfully")
@@ -31,11 +35,14 @@ class DatabaseManager:
             raise
     
     def close_session(self):
+        """Close database session"""
         self.Session.remove()
 
+# Global database instance
 db_manager = DatabaseManager()
 
 def init_db(app=None):
+    """Initialize database for Flask app"""
     if app:
         @app.teardown_appcontext
         def shutdown_session(exception=None):

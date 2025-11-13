@@ -1,5 +1,8 @@
-from .database import DatabaseManager
-from .security import EncryptionManager
+"""
+PTPanel Core Module
+"""
+from .database import DatabaseManager, db_manager
+from .security import EncryptionManager, encryption_manager
 from .telegram_client import TelegramClientManager
 from .account_manager import AccountManager
 from .stealer_builder import StealerBuilder
@@ -10,8 +13,10 @@ __author__ = "PTPanel Team"
 
 __all__ = [
     'DatabaseManager',
-    'EncryptionManager',
-    'TelegramClientManager', 
+    'db_manager',
+    'EncryptionManager', 
+    'encryption_manager',
+    'TelegramClientManager',
     'AccountManager',
     'StealerBuilder',
     'TunnelManager'
