@@ -1,0 +1,35 @@
+# Web Framework
+Flask==2.3.3
+Werkzeug==2.3.7
+Jinja2==3.1.2
+
+# Database
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.7
+alembic==1.12.1
+
+# Telegram
+telethon==1.28.5
+pyrogram==2.0.106
+python-telegram-bot==20.7
+tgcrypto==1.2.5
+
+# Security
+cryptography==41.0.7
+bcrypt==4.0.1
+
+# Utilities
+python-dotenv==1.0.0
+requests==2.31.0
+qrcode==7.4.2
+pillow==10.0.1
+pyngrok==7.0.0
+pyinstaller==5.13.0
+
+# Frontend
+bootstrap-flask==2.3.0
+flask-wtf==1.1.1
+wtforms==3.0.1
+
+# Development
+python-multipart==0.0.6
