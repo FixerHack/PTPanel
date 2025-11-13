@@ -1,83 +1,159 @@
-# OS
-.DS_Store
-Thumbs.db
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-pnpm-lock.yaml
-
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
-*.egg-info/
-dist/
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
 .eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environment
 venv/
 env/
-.venv/
-pip-wheel-metadata/
-*.egg
-*.pyc
-.python-version
+ENV/
+env.bak/
+venv.bak/
+pythonenv*
 
-# Editor/IDE
-.vscode/
-.idea/
-*.iml
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+.env.*.local
+
+# Database
+*.db
+*.sqlite3
+*.db-journal
+*.sqlite3-journal
 
 # Logs
-logs/
 *.log
-*.sql
-*.sqlite
+logs/
+*.log.*
+!logs/.gitkeep
 
-# Environment
-.env
-.env.*
+# Uploads (except our managed directories)
+uploads/*
+!uploads/.gitkeep
+!uploads/sessions/
+!uploads/tdata/
+!uploads/stolen_files/
 
-# Coverage
-.coverage
-htmlcov/
-.pytest_cache/
+# PyInstaller
+client/build/
+client/dist/
+*.spec
 
-# Docker
-.dockerignore
-docker-compose.override.yml
-
-# Terraform
-.terraform/
-*.tfstate
-*.tfstate.*
-
-# Vim swap files
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
+*~
+*.sublime-*
+*.sublime-project
+*.sublime-workspace
 
-# Misc
-.cache/
-*.DS_Store
-
-# Ignore built packages
-dist/
-build/
-
-# Ignore secrets and credentials
-credentials.json
-
-# macOS resource forks
-.AppleDouble
-
-# Windows image file cache
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 ehthumbs.db
+Thumbs.db
+Desktop.ini
 
 # Temporary files
+tmp/
+temp/
 *.tmp
 *.temp
+.cache/
 
-# End of file
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+
+# Documentation
+docs/_build/
+*.mo
+*.pot
+
+# Flask
+instance/
+
+# Security
+*.pem
+*.key
+*.crt
+*.csr
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# PyCharm
+.idea/dictionaries/
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/workspace.xml
+
+# VS Code
+.history/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Application specific
+stealer_builds/
+compiled_clients/
+*.exe
+client_*.zip
+build_*.log
+
+# Telegram session files (except our managed ones)
+*.session
+*.session-journal
+tdata/
+
+# MacOS
+.AppleDouble
+.LSOverride
+
+# Windows
+$RECYCLE.BIN/
