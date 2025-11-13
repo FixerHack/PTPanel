@@ -3,8 +3,10 @@ import logging
 from flask import Flask, render_template
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -17,15 +19,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def create_app():
+    """Application factory function for PTPanel"""
     app = Flask(__name__)
     
+    # Load configuration
     from config import config
     app.config.from_object(config.server)
     app.config['APP_NAME'] = "PTPanel"
     
+    # Initialize extensions
     from core.database import init_db
     init_db(app)
     
+    # Basic routes
     @app.route('/')
     def index():
         return render_template('index.html', app_name="PTPanel")
@@ -34,6 +40,7 @@ def create_app():
     def health():
         return {'status': 'healthy', 'service': 'PTPanel'}
     
+    # Error handlers
     @app.errorhandler(404)
     def not_found(error):
         return render_template('404.html', app_name="PTPanel"), 404

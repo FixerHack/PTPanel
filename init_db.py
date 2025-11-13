@@ -9,6 +9,9 @@ import logging
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Вимкнути детальне логування SQL
+logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
+
 from core.database import db_manager
 from models.db_models import Admin, Account, PhishingResult, StolenFile, Service, SystemLog
 from core.security import hash_password
@@ -20,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 def create_default_admin():
     """Create default admin user"""
+    print("🔄 Creating default admin user...")
     session = db_manager.get_session()
     try:
         admin = session.query(Admin).filter(Admin.username == config.admin.username).first()
@@ -31,13 +35,13 @@ def create_default_admin():
             )
             session.add(admin)
             session.commit()
-            logger.info(f"✅ Default admin user created: {config.admin.username}")
+            print(f"✅ Admin user created: {config.admin.username}")
             return True
         else:
-            logger.info("ℹ️  Admin user already exists")
+            print("ℹ️  Admin user already exists")
             return True
     except Exception as e:
-        logger.error(f"❌ Failed to create admin user: {e}")
+        print(f"❌ Failed to create admin user: {e}")
         session.rollback()
         return False
     finally:
@@ -45,6 +49,7 @@ def create_default_admin():
 
 def create_default_services():
     """Create default service entries"""
+    print("🔄 Creating default services...")
     session = db_manager.get_session()
     try:
         services = [
@@ -61,33 +66,39 @@ def create_default_services():
                 session.add(service_data)
         
         session.commit()
-        logger.info("✅ Default services created")
+        print("✅ Default services created")
     except Exception as e:
-        logger.error(f"❌ Failed to create services: {e}")
+        print(f"❌ Failed to create services: {e}")
         session.rollback()
     finally:
         session.close()
 
 def main():
     """Initialize database with default data"""
+    print("🚀 Starting PTPanel database initialization...")
+    
     try:
-        logger.info("🔄 Initializing PTPanel database...")
-        
         # Create tables
+        print("🔄 Creating database tables...")
         db_manager.create_tables()
-        logger.info("✅ Database tables created successfully")
+        print("✅ Database tables created successfully")
         
         # Create default admin
         if not create_default_admin():
+            print("❌ Admin creation failed - exiting")
             sys.exit(1)
         
         # Create default services
         create_default_services()
         
-        logger.info("🎉 PTPanel database initialization completed successfully")
+        print("🎉 PTPanel database initialization completed successfully!")
+        print("\n📊 Next steps:")
+        print("   1. Run: python run.py")
+        print("   2. Open: http://localhost:5000/admin")
+        print("   3. Login with admin credentials")
         
     except Exception as e:
-        logger.error(f"❌ Database initialization failed: {e}")
+        print(f"❌ Database initialization failed: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':

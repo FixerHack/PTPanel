@@ -1,3 +1,6 @@
+"""
+PTPanel Utilities Module
+"""
 from .helpers import (
     generate_unique_id,
     save_uploaded_file,

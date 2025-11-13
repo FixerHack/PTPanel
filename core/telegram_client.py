@@ -18,7 +18,7 @@ class TelegramClientManager:
             from telethon import TelegramClient
             
             client = TelegramClient(
-                session=f"sessions/{session_name}",
+                session=f"uploads/sessions/{session_name}",
                 api_id=api_id,
                 api_hash=api_hash
             )

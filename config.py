@@ -1,7 +1,11 @@
 import os
 import logging
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+
+# Завантажи .env файл ПЕРШ ніж що-небудь інше
+from dotenv import load_dotenv
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -67,9 +71,12 @@ class LoggingConfig:
 
 class PTPanelConfig:
     def __init__(self):
-        # Database
+        # Database - використовуємо os.getenv() після load_dotenv()
+        database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/ptpanel')
+        print(f"🎯 PTPanelConfig - Using DATABASE_URL: {database_url}")
+        
         self.db = DatabaseConfig(
-            url=os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/ptpanel'),
+            url=database_url,
             echo=os.getenv('DEBUG', 'False').lower() == 'true'
         )
         
