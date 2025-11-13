@@ -1,7 +1,7 @@
 # Web Framework
 Flask==2.3.3
-Werkzeug==2.3.7
-Jinja2==3.1.2
+Werkzeug==3.0.6
+Jinja2==3.1.6
 
 # Database
 SQLAlchemy==2.0.23
@@ -15,16 +15,16 @@ python-telegram-bot==20.7
 tgcrypto==1.2.5
 
 # Security
-cryptography==41.0.7
+cryptography==44.0.1
 bcrypt==4.0.1
 
 # Utilities
 python-dotenv==1.0.0
-requests==2.31.0
+requests==2.32.4
 qrcode==7.4.2
-pillow==10.0.1
+pillow==10.3.0
 pyngrok==7.0.0
-pyinstaller==5.13.0
+pyinstaller==6.15.0
 
 # Frontend
 bootstrap-flask==2.3.0
@@ -32,4 +32,4 @@ flask-wtf==1.1.1
 wtforms==3.0.1
 
 # Development
-python-multipart==0.0.6
+python-multipart==0.0.18
