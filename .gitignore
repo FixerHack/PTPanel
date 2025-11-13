@@ -1,0 +1,83 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+pip-wheel-metadata/
+*.egg
+*.pyc
+.python-version
+
+# Editor/IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+logs/
+*.log
+*.sql
+*.sqlite
+
+# Environment
+.env
+.env.*
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Vim swap files
+*.swp
+*.swo
+
+# Misc
+.cache/
+*.DS_Store
+
+# Ignore built packages
+dist/
+build/
+
+# Ignore secrets and credentials
+credentials.json
+
+# macOS resource forks
+.AppleDouble
+
+# Windows image file cache
+ehthumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# End of file
