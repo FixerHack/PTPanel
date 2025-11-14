@@ -5,6 +5,7 @@ PTPanel Main Entry Point
 import os
 import sys
 import logging
+from sqlalchemy import text  # ← ДОДАЙТЕ ЦЕЙ ІМПОРТ
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -24,15 +25,15 @@ def setup_environment():
     # Check database connection
     try:
         from core.database import db_manager
+        
         session = db_manager.get_session()
-        session.execute("SELECT 1")
+        session.execute(text("SELECT 1"))  # ← ВИПРАВЛЕНА ЛІНІЯ
         session.close()
         logger.info("✅ Database connection successful")
+        return True
     except Exception as e:
         logger.error(f"❌ Database connection failed: {e}")
         return False
-    
-    return True
 
 def main():
     """Main application entry point for PTPanel"""
