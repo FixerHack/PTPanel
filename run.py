@@ -5,7 +5,13 @@ PTPanel Main Entry Point
 import os
 import sys
 import logging
-from sqlalchemy import text  # ← ДОДАЙТЕ ЦЕЙ ІМПОРТ
+from sqlalchemy import text
+
+# Fix Unicode encoding in Windows
+if sys.platform == "win32":
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -13,7 +19,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app import create_app
 from config import config
 
-# Setup logging
+# Setup logging with UTF-8 encoding
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/app.log', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)  # Use stdout with UTF-8
+    ]
+)
+
 logger = logging.getLogger('ptpanel')
 
 def setup_environment():
@@ -29,7 +44,7 @@ def setup_environment():
         session = db_manager.get_session()
         session.execute(text("SELECT 1"))  # ← ВИПРАВЛЕНА ЛІНІЯ
         session.close()
-        logger.info("✅ Database connection successful")
+        logger.info(">>> Database connection successful")
         return True
     except Exception as e:
         logger.error(f"❌ Database connection failed: {e}")
@@ -38,7 +53,7 @@ def setup_environment():
 def main():
     """Main application entry point for PTPanel"""
     try:
-        logger.info("🚀 Starting PTPanel - Telegram Research Framework")
+        logger.info(">>> Starting PTPanel - Telegram Research Framework")
         
         # Setup environment
         if not setup_environment():

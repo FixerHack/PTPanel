@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 40px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn { 
+            display: inline-block; 
+            padding: 12px 24px; 
+            background: #0088cc; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status { background: #e9ecef; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ {{ app_name }} - Telegram Research Framework</h1>
+        <p>Система для дослідження соціальної інженерії та тестування усвідомленості</p>
+        
+        <div style="margin: 30px 0;">
+            <a href="/admin" class="btn">🔐 Адмін панель</a>
+            <a href="/health" class="btn" style="background: #28a745;">🩺 Health Check</a>
+        </div>
+
+        <div class="status">
+            <h3>📊 Статус системи:</h3>
+            <ul>
+                <li>✅ База даних: Працює</li>
+                <li>⚠️ Боти: Не налаштовані</li>
+                <li>⚠️ Веб-інтерфейс: В розробці</li>
+                <li>🔧 Режим: Розробка</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px;">
+            <strong>⚡ Наступні кроки:</strong>
+            <ol>
+                <li>Створити адмін-панель</li>
+                <li>Налаштувати Telegram ботів</li>
+                <li>Створити фішинг форми</li>
+                <li>Реалізувати Stealer систему</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

