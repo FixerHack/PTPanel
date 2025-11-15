@@ -1,0 +1,74 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Settings - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Settings</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Telegram API</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">API ID:</label>
+                    <input type="text" class="form-control" value="12345678">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">API Hash:</label>
+                    <input type="text" class="form-control" value="abcdef1234567890abcdef">
+                </div>
+                <button class="btn btn-primary">Зберегти</button>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Проксі налаштування</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Тип проксі:</label>
+                    <select class="form-select">
+                        <option>SOCKS5</option>
+                        <option>HTTP</option>
+                        <option>HTTPS</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Хост:Порт:</label>
+                    <input type="text" class="form-control" placeholder="127.0.0.1:8080">
+                </div>
+                <button class="btn btn-secondary">Додати проксі</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Безпека</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Логін:</label>
+                    <input type="text" class="form-control" value="admin">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Новий пароль:</label>
+                    <input type="password" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Підтвердження пароля:</label>
+                    <input type="password" class="form-control">
+                </div>
+                <button class="btn btn-warning">Змінити пароль</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Logs - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">System Logs</h1>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#bot-logs" data-bs-toggle="tab">Bot Logs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#site-logs" data-bs-toggle="tab">Site Logs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#system-logs" data-bs-toggle="tab">System Logs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#admin-logs" data-bs-toggle="tab">Admin Logs</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <div class="tab-pane active" id="bot-logs">
+                        <pre class="bg-dark text-light p-3 rounded" style="height: 300px; overflow-y: auto;">
+2025-11-15 12:46:00 - Bot started
+2025-11-15 12:46:01 - WebApp Bot initialized
+2025-11-15 12:46:02 - Classic Bot initialized
+                        </pre>
+                    </div>
+                    <div class="tab-pane" id="site-logs">
+                        <pre class="bg-dark text-light p-3 rounded" style="height: 300px; overflow-y: auto;">
+Site logs will appear here...
+                        </pre>
+                    </div>
+                    <div class="tab-pane" id="system-logs">
+                        <pre class="bg-dark text-light p-3 rounded" style="height: 300px; overflow-y: auto;">
+System logs will appear here...
+                        </pre>
+                    </div>
+                    <div class="tab-pane" id="admin-logs">
+                        <pre class="bg-dark text-light p-3 rounded" style="height: 300px; overflow-y: auto;">
+Admin logs will appear here...
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

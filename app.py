@@ -11,7 +11,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/app.log'),
+        logging.FileHandler('logs/app.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -25,11 +25,22 @@ def create_app():
     # Load configuration
     from config import config
     app.config.from_object(config.server)
+    
+    # Додаємо SECRET_KEY для сесій
+    app.config['SECRET_KEY'] = config.server.secret_key
     app.config['APP_NAME'] = "PTPanel"
+
+    # Після реєстрації admin_bp
+    from web.api.routes import api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
     
     # Initialize extensions
     from core.database import init_db
     init_db(app)
+    
+    # Register blueprints
+    from web.admin.routes import admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
     
     # Basic routes
     @app.route('/')

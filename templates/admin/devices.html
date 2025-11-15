@@ -1,0 +1,77 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Devices - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Devices</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+            <i class="fas fa-plus"></i> Додати акаунт
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Методи додавання акаунтів</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
+                                <h5>QR код</h5>
+                                <button class="btn btn-outline-primary btn-sm">Вибрати</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <i class="fas fa-phone fa-3x text-success mb-3"></i>
+                                <h5>Номер телефону</h5>
+                                <button class="btn btn-outline-success btn-sm">Вибрати</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <i class="fas fa-folder fa-3x text-warning mb-3"></i>
+                                <h5>Tdata</h5>
+                                <button class="btn btn-outline-warning btn-sm">Вибрати</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <i class="fas fa-file fa-3x text-info mb-3"></i>
+                                <h5>.session файл</h5>
+                                <button class="btn btn-outline-info btn-sm">Вибрати</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Список акаунтів</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Акаунтів ще не додано</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
