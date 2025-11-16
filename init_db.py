@@ -31,7 +31,8 @@ def create_default_admin():
             admin = Admin(
                 username=config.admin.username,
                 password_hash=hash_password(config.admin.password),
-                is_active=True
+                is_active=True,
+                is_main_admin=True
             )
             session.add(admin)
             session.commit()
