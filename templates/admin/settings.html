@@ -1,3 +1,4 @@
+<!-- templates/admin/settings.html -->
 {% extends "admin/base.html" %}
 
 {% block title %}Settings - {{ app_name }}{% endblock %}
@@ -5,70 +6,232 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Settings</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-success me-2" onclick="saveAllSettings()">
+            <i class="fas fa-save"></i> Зберегти всі налаштування
+        </button>
+    </div>
 </div>
 
 <div class="row">
-    <div class="col-md-6">
+    <!-- Telegram API Settings -->
+    <div class="col-md-6 mb-4">
         <div class="card">
-            <div class="card-header">
-                <h5>Telegram API</h5>
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-paper-plane"></i> Telegram API</h5>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">API ID:</label>
-                    <input type="text" class="form-control" value="12345678">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">API Hash:</label>
-                    <input type="text" class="form-control" value="abcdef1234567890abcdef">
-                </div>
-                <button class="btn btn-primary">Зберегти</button>
-            </div>
-        </div>
-        
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5>Проксі налаштування</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Тип проксі:</label>
-                    <select class="form-select">
-                        <option>SOCKS5</option>
-                        <option>HTTP</option>
-                        <option>HTTPS</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Хост:Порт:</label>
-                    <input type="text" class="form-control" placeholder="127.0.0.1:8080">
-                </div>
-                <button class="btn btn-secondary">Додати проксі</button>
+                <form id="telegramForm">
+                    <div class="mb-3">
+                        <label class="form-label">API ID:</label>
+                        <input type="number" class="form-control" name="api_id" value="{{ settings.telegram.api_id }}" 
+                               placeholder="37680969" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Hash:</label>
+                        <input type="text" class="form-control" name="api_hash" value="{{ settings.telegram.api_hash }}"
+                               placeholder="00d3f77aef49def87eeb0ce9cee9e0c5" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Номер телефону:</label>
+                        <input type="text" class="form-control" name="phone_number" value="{{ settings.telegram.phone_number }}"
+                               placeholder="+380123456789">
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-6">
+
+    <!-- Server Settings -->
+    <div class="col-md-6 mb-4">
         <div class="card">
-            <div class="card-header">
-                <h5>Безпека</h5>
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-server"></i> Сервер</h5>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Логін:</label>
-                    <input type="text" class="form-control" value="admin">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Новий пароль:</label>
-                    <input type="password" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Підтвердження пароля:</label>
-                    <input type="password" class="form-control">
-                </div>
-                <button class="btn btn-warning">Змінити пароль</button>
+                <form id="serverForm">
+                    <div class="mb-3">
+                        <label class="form-label">Хост:</label>
+                        <input type="text" class="form-control" name="host" value="{{ settings.server.host }}"
+                               placeholder="0.0.0.0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Порт:</label>
+                        <input type="number" class="form-control" name="port" value="{{ settings.server.port }}"
+                               placeholder="5000" required>
+                    </div>
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="debug" 
+                               {% if settings.server.debug %}checked{% endif %}>
+                        <label class="form-check-label">Режим налагодження (DEBUG)</label>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bot Tokens -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-robot"></i> Telegram Боти</h5>
+            </div>
+            <div class="card-body">
+                <form id="botsForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">WebApp Bot Token:</label>
+                            <input type="text" class="form-control" name="webapp_token" 
+                                   value="{{ settings.bots.webapp_token }}" placeholder="1234567890:AAE...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Classic Bot Token:</label>
+                            <input type="text" class="form-control" name="classic_token" 
+                                   value="{{ settings.bots.classic_token }}" placeholder="9876543210:BBF...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Multitool Bot Token:</label>
+                            <input type="text" class="form-control" name="multitool_token" 
+                                   value="{{ settings.bots.multitool_token }}" placeholder="5555555555:CCC...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Admin Bot Token:</label>
+                            <input type="text" class="form-control" name="admin_token" 
+                                   value="{{ settings.bots.admin_token }}" placeholder="5876803754:AAH..." required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-cogs"></i> Додаткові налаштування</h5>
+            </div>
+            <div class="card-body">
+                <form id="additionalForm">
+                    <div class="mb-3">
+                        <label class="form-label">Ngrok Auth Token:</label>
+                        <input type="text" class="form-control" name="ngrok_auth_token" 
+                               value="{{ settings.additional.ngrok_auth_token }}" placeholder="your_ngrok_token_here">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ngrok Domain:</label>
+                        <input type="text" class="form-control" name="ngrok_domain" 
+                               value="{{ settings.additional.ngrok_domain }}" placeholder="your-domain.ngrok.io">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Безпека</h5>
+            </div>
+            <div class="card-body">
+                <form id="securityForm">
+                    <div class="mb-3">
+                        <label class="form-label">Логін:</label>
+                        <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Новий пароль:</label>
+                        <input type="password" class="form-control" name="new_password" placeholder="Введіть новий пароль">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Підтвердження пароля:</label>
+                        <input type="password" class="form-control" name="confirm_password" placeholder="Підтвердіть пароль">
+                    </div>
+                    <button type="button" class="btn btn-warning" onclick="changePassword()">
+                        <i class="fas fa-key"></i> Змінити пароль
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function saveAllSettings() {
+    // Збереження всіх форм
+    const forms = ['telegram', 'server', 'bots', 'additional'];
+    let allSuccess = true;
+
+    forms.forEach(formType => {
+        const formData = new FormData(document.getElementById(formType + 'Form'));
+        const data = Object.fromEntries(formData);
+        
+        fetch('/admin/settings/save/' + formType, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        }).then(response => response.json())
+        .then(result => {
+            if (!result.success) allSuccess = false;
+        });
+    });
+
+    if (allSuccess) {
+        showAlert('Налаштування збережено!', 'success');
+    } else {
+        showAlert('Помилка при збереженні!', 'danger');
+    }
+}
+
+function importFromEnv() {
+    if (confirm('Імпортувати налаштування з .env файлу?')) {
+        fetch('/admin/settings/migrate', {method: 'POST'})
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert('Налаштування імпортовано!', 'success');
+                location.reload();
+            } else {
+                showAlert('Помилка імпорту!', 'danger');
+            }
+        });
+    }
+}
+
+function changePassword() {
+    const formData = new FormData(document.getElementById('securityForm'));
+    const data = Object.fromEntries(formData);
+    
+    if (data.new_password !== data.confirm_password) {
+        showAlert('Паролі не співпадають!', 'danger');
+        return;
+    }
+    
+    fetch('/admin/settings/change_password', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    }).then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('Пароль змінено!', 'success');
+            document.getElementById('securityForm').reset();
+        } else {
+            showAlert('Помилка зміни пароля!', 'danger');
+        }
+    });
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.main-content').prepend(alertDiv);
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+</script>
 {% endblock %}

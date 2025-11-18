@@ -75,5 +75,17 @@ class SystemLog(Base):
     admin_id = Column(Integer, ForeignKey('admins.id'))
     details = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class UserConfig(Base):
+    __tablename__ = 'user_configs'
+    
+    id = Column(Integer, primary_key=True)
+    admin_id = Column(Integer, ForeignKey('admins.id'), nullable=False)
+    config_type = Column(String(50), nullable=False)  # 'telegram', 'server', 'bots', 'additional'
+    config_data = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    admin = relationship("Admin")
     
     admin = relationship("Admin")

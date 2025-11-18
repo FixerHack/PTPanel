@@ -33,3 +33,4 @@ wtforms==3.0.1
 
 # Development
 python-multipart==0.0.6
+psutil==7.1.3

