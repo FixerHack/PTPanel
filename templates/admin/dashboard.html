@@ -1,3 +1,4 @@
+<!-- templates/admin/dashboard.html -->
 {% extends "admin/base.html" %}
 
 {% block title %}Dashboard - {{ app_name }}{% endblock %}
@@ -5,15 +6,19 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Dashboard</h1>
+    <button class="btn btn-outline-primary btn-sm" onclick="refreshStats()">
+        <i class="fas fa-sync-alt"></i> Оновити
+    </button>
 </div>
 
+<!-- Статистика -->
 <div class="row">
     <div class="col-md-3 mb-4">
         <div class="card text-white bg-primary">
             <div class="card-body">
                 <div class="d-flex">
                     <div>
-                        <h4 class="card-title">0</h4>
+                        <h4 class="card-title" id="accountsCount">{{ accounts_count }}</h4>
                         <p class="card-text">Акаунтів</p>
                     </div>
                     <div class="ms-auto">
@@ -29,7 +34,7 @@
             <div class="card-body">
                 <div class="d-flex">
                     <div>
-                        <h4 class="card-title">0</h4>
+                        <h4 class="card-title" id="resultsCount">{{ results_count }}</h4>
                         <p class="card-text">Результатів</p>
                     </div>
                     <div class="ms-auto">
@@ -45,7 +50,7 @@
             <div class="card-body">
                 <div class="d-flex">
                     <div>
-                        <h4 class="card-title">0</h4>
+                        <h4 class="card-title" id="filesCount">{{ files_count }}</h4>
                         <p class="card-text">Файлів</p>
                     </div>
                     <div class="ms-auto">
@@ -61,7 +66,7 @@
             <div class="card-body">
                 <div class="d-flex">
                     <div>
-                        <h4 class="card-title">5</h4>
+                        <h4 class="card-title">{{ services_count }}</h4>
                         <p class="card-text">Сервісів</p>
                     </div>
                     <div class="ms-auto">
@@ -73,6 +78,53 @@
     </div>
 </div>
 
+<!-- Графік активності та останні результати -->
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Остання активність</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Останні результати</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_results %}
+                    <div class="list-group">
+                        {% for result in recent_results %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <small class="text-muted">{{ result.timestamp.strftime('%H:%M') }}</small>
+                                <span class="badge bg-secondary">{{ result.bot_type }}</span>
+                            </div>
+                            <p class="mb-1">
+                                {% if result.credentials and result.credentials.phone %}
+                                    +{{ result.credentials.phone }}
+                                {% else %}
+                                    Немає даних
+                                {% endif %}
+                            </p>
+                            <small>{{ result.ip_address }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Ще немає результатів</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Швидкі дії -->
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">
@@ -80,17 +132,231 @@
                 <h5>Швидкі дії</h5>
             </div>
             <div class="card-body">
-                <a href="/admin/devices" class="btn btn-primary me-2">
-                    <i class="fas fa-plus"></i> Додати акаунт
-                </a>
-                <a href="/admin/stealer" class="btn btn-success me-2">
-                    <i class="fas fa-download"></i> Збудувати стіллер
-                </a>
-                <a href="/admin/services" class="btn btn-info">
-                    <i class="fas fa-link"></i> Створити посилання
-                </a>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('admin.admin_devices') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Додати акаунт
+                    </a>
+                    <a href="{{ url_for('admin.admin_stealer') }}" class="btn btn-success">
+                        <i class="fas fa-hammer"></i> Збудувати стіллер
+                    </a>
+                    <a href="{{ url_for('admin.admin_services') }}" class="btn btn-info">
+                        <i class="fas fa-link"></i> Створити посилання
+                    </a>
+                    <a href="{{ url_for('admin.admin_settings') }}" class="btn btn-warning">
+                        <i class="fas fa-cog"></i> Налаштування
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Інформація про систему -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Системна інформація</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Поточний адмін:</strong><br>
+                        <span class="text-primary">{{ current_user.username }}</span>
+                    </div>
+                    <div class="col-6">
+                        <strong>ID адміна:</strong><br>
+                        <span class="text-info">{{ session.admin_id }}</span>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6">
+                        <strong>База даних:</strong><br>
+                        <span class="text-success">Активна</span>
+                    </div>
+                    <div class="col-6">
+                        <strong>Сервіси:</strong><br>
+                        <span class="badge bg-info">{{ services_count }}/5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Статистика за сьогодні</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h3 id="todayAccounts" class="text-primary">0</h3>
+                        <small>Нових акаунтів</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 id="todayResults" class="text-success">0</h3>
+                        <small>Результатів</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 id="todayFiles" class="text-warning">0</h3>
+                        <small>Файлів</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Ініціалізація графіка
+let activityChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Завантажуємо статистику при старті
+    loadActivityChart();
+    loadTodayStats();
+    
+    // Автооновлення кожні 30 секунд
+    setInterval(refreshStats, 30000);
+});
+
+function loadActivityChart() {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    
+    // Типовий графік активності (потім замінимо реальними даними)
+    activityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'],
+            datasets: [{
+                label: 'Активність',
+                data: [12, 19, 3, 5, 2, 3, 15],
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 5
+                    }
+                }
+            }
+        }
+    });
+}
+
+function refreshStats() {
+    // AJAX запит для оновлення статистики
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Оновлюємо значення
+                document.getElementById('accountsCount').textContent = data.stats.accounts || 0;
+                document.getElementById('resultsCount').textContent = data.stats.stolen_files || 0;
+                document.getElementById('filesCount').textContent = data.stats.stolen_files || 0;
+                
+                // Показуємо сповіщення
+                showNotification('Статистика оновлена', 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing stats:', error);
+        });
+}
+
+function loadTodayStats() {
+    // AJAX запит для статистики за сьогодні
+    fetch('/admin/api/today_stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('todayAccounts').textContent = data.today_accounts || 0;
+                document.getElementById('todayResults').textContent = data.today_results || 0;
+                document.getElementById('todayFiles').textContent = data.today_files || 0;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading today stats:', error);
+        });
+}
+
+function showNotification(message, type) {
+    // Перевіряємо чи вже є сповіщення
+    const existingAlerts = document.querySelectorAll('.notification-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Створюємо нове сповіщення
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show notification-alert position-fixed`;
+    alertDiv.style.cssText = 'top: 70px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    // Автоматично прибираємо через 3 секунди
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+
+// Додаємо інформацію про оновлення
+setInterval(() => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    document.querySelector('.border-bottom h1').innerHTML = `
+        Dashboard 
+        <small class="text-muted fs-6">(оновлено: ${timeString})</small>
+    `;
+}, 60000);
+</script>
+
+<style>
+.notification-alert {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
 {% endblock %}

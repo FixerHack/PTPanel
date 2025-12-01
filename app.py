@@ -1,4 +1,4 @@
-import os
+# app.py - ВИПРАВЛЕНА ВЕРСІЯ
 import logging
 from flask import Flask, render_template
 from dotenv import load_dotenv
@@ -16,6 +16,7 @@ logging.basicConfig(
     ]
 )
 
+
 logger = logging.getLogger(__name__)
 
 def create_app():
@@ -24,9 +25,6 @@ def create_app():
     
     # Load configuration
     from config import config
-    app.config.from_object(config.server)
-    
-    # Додаємо SECRET_KEY для сесій
     app.config['SECRET_KEY'] = config.server.secret_key
     app.config['APP_NAME'] = "PTPanel"
 
@@ -59,11 +57,16 @@ def create_app():
     @app.errorhandler(500)
     def internal_error(error):
         return render_template('500.html', app_name="PTPanel"), 500
+     # Важливо: /api префікс
     
     return app
 
 if __name__ == '__main__':
     app = create_app()
+    
+    # Отримуємо конфігурацію тут, після створення app
+    from config import config
+    
     logger.info(f"Starting PTPanel on {config.server.host}:{config.server.port}")
     app.run(
         host=config.server.host,

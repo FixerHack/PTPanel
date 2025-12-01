@@ -1,3 +1,4 @@
+<!-- templates/admin/devices.html -->
 {% extends "admin/base.html" %}
 
 {% block title %}Devices - {{ app_name }}{% endblock %}
@@ -5,11 +6,6 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Devices</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAccountModal">
-            <i class="fas fa-plus"></i> Додати акаунт
-        </button>
-    </div>
 </div>
 
 <div class="row">
@@ -20,39 +16,58 @@
             </div>
             <div class="card-body">
                 <div class="row text-center">
+                    <!-- QR Code Method -->
                     <div class="col-md-3 mb-3">
-                        <div class="card">
-                            <div class="card-body">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column">
                                 <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
                                 <h5>QR код</h5>
-                                <button class="btn btn-outline-primary btn-sm">Вибрати</button>
+                                <p class="text-muted small">Авторизація через QR код в Telegram</p>
+                                <button class="btn btn-outline-primary mt-auto" data-bs-toggle="modal" data-bs-target="#qrModal">
+                                    <i class="fas fa-plus"></i> Вибрати
+                                </button>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Phone Number Method -->
                     <div class="col-md-3 mb-3">
-                        <div class="card">
-                            <div class="card-body">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column">
                                 <i class="fas fa-phone fa-3x text-success mb-3"></i>
                                 <h5>Номер телефону</h5>
-                                <button class="btn btn-outline-success btn-sm">Вибрати</button>
+                                <p class="text-muted small">Введення номера та коду підтвердження</p>
+                                <button class="btn btn-outline-success mt-auto" data-bs-toggle="modal" data-bs-target="#phoneModal">
+                                    <i class="fas fa-plus"></i> Вибрати
+                                </button>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Tdata Method -->
                     <div class="col-md-3 mb-3">
-                        <div class="card">
-                            <div class="card-body">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column">
                                 <i class="fas fa-folder fa-3x text-warning mb-3"></i>
                                 <h5>Tdata</h5>
-                                <button class="btn btn-outline-warning btn-sm">Вибрати</button>
+                                <p class="text-muted small">Завантаження архіву з папкою tdata</p>
+                                <button class="btn btn-outline-warning mt-auto" data-bs-toggle="modal" data-bs-target="#tdataModal">
+                                    <i class="fas fa-plus"></i> Вибрати
+                                </button>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Session File Method -->
                     <div class="col-md-3 mb-3">
-                        <div class="card">
-                            <div class="card-body">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column">
                                 <i class="fas fa-file fa-3x text-info mb-3"></i>
                                 <h5>.session файл</h5>
-                                <button class="btn btn-outline-info btn-sm">Вибрати</button>
+                                <p class="text-muted small">Завантаження готового .session файлу</p>
+                                <button class="btn btn-outline-info mt-auto" data-bs-toggle="modal" data-bs-target="#sessionModal">
+                                    <i class="fas fa-plus"></i> Вибрати
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -65,13 +80,366 @@
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5>Список акаунтів</h5>
+                <span class="badge bg-primary" id="accountsCount">Завантаження...</span>
             </div>
             <div class="card-body">
-                <p class="text-muted">Акаунтів ще не додано</p>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="accountsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Телефон</th>
+                                <th>Статус</th>
+                                <th>API ID</th>
+                                <th>Остання активність</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accountsList">
+                            <!-- Accounts will be loaded via JavaScript -->
+                            <tr id="loadingRow">
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Завантаження...</span>
+                                    </div>
+                                    <p class="mt-2">Завантаження акаунтів...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3 text-center" id="noAccountsMessage" style="display: none;">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5>Акаунтів ще не додано</h5>
+                    <p class="text-muted">Використайте один з методів вище для додавання першого акаунта</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-qrcode"></i> Додавання через QR код</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <div id="qrCodeContainer">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Генерація QR...</span>
+                        </div>
+                        <p class="mt-2">Генерація QR коду...</p>
+                    </div>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Інструкція:</strong>
+                    <ol class="mb-0 mt-2">
+                        <li>Відкрийте Telegram на телефоні</li>
+                        <li>Перейдіть в Налаштування → Пристрої</li>
+                        <li>Натисніть "Підключити пристрій"</li>
+                        <li>Відскануйте QR код вище</li>
+                    </ol>
+                </div>
+                <div id="qrStatus" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-primary" onclick="refreshQRCode()">
+                    <i class="fas fa-sync-alt"></i> Оновити QR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Phone Number Modal -->
+<div class="modal fade" id="phoneModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-phone"></i> Додавання через номер телефону</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="phoneForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Номер телефону:</label>
+                        <div class="input-group">
+                            <span class="input-group-text">+</span>
+                            <input type="text" class="form-control" name="phone" 
+                                   placeholder="380123456789" required pattern="[0-9]{10,15}">
+                        </div>
+                        <small class="form-text text-muted">Введіть номер без + (наприклад: 380123456789)</small>
+                    </div>
+                    
+                    <div id="codeSection" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Код з Telegram:</label>
+                            <input type="text" class="form-control" name="code" 
+                                   placeholder="12345" pattern="[0-9]{5}">
+                            <small class="form-text text-muted">5-значний код, надісланий в Telegram</small>
+                        </div>
+                    </div>
+                    
+                    <div id="passwordSection" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Пароль (2FA):</label>
+                            <input type="password" class="form-control" name="password" 
+                                   placeholder="Якщо встановлено">
+                            <small class="form-text text-muted">Пароль двофакторної авторизації (якщо є)</small>
+                        </div>
+                    </div>
+                    
+                    <div id="phoneStatus" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <button type="submit" class="btn btn-success" id="phoneSubmitBtn">
+                        <i class="fas fa-sign-in-alt"></i> Почати авторизацію
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Tdata Modal -->
+<div class="modal fade" id="tdataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-folder"></i> Додавання через Tdata</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="tdataForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Архів з tdata:</label>
+                        <input type="file" class="form-control" name="tdata_file" accept=".zip,.rar,.7z" required>
+                        <small class="form-text text-muted">
+                            Завантажте ZIP архів з папкою tdata з AppData/Roaming/Telegram Desktop/
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">API ID (опціонально):</label>
+                        <input type="number" class="form-control" name="api_id" 
+                               placeholder="Наприклад: 123456">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">API Hash (опціонально):</label>
+                        <input type="text" class="form-control" name="api_hash" 
+                               placeholder="Наприклад: abc123def456">
+                    </div>
+                    
+                    <div id="tdataStatus" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-upload"></i> Завантажити
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Session Modal -->
+<div class="modal fade" id="sessionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file"></i> Додавання через .session файл</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="sessionForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">.session файл:</label>
+                        <input type="file" class="form-control" name="session_file" accept=".session,.session-journal" required>
+                        <small class="form-text text-muted">
+                            Завантажте .session файл з Telethon або Pyrogram
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">API ID:</label>
+                        <input type="number" class="form-control" name="api_id" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">API Hash:</label>
+                        <input type="text" class="form-control" name="api_hash" required>
+                    </div>
+                    
+                    <div id="sessionStatus" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-upload"></i> Завантажити
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Account Actions Modal -->
+<div class="modal fade" id="accountActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Дії з акаунтом <span id="accountPhone"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="testAccountConnection()">
+                        <i class="fas fa-wifi"></i> Перевірити підключення
+                    </button>
+                    <button class="btn btn-outline-success" onclick="exportAccountSession()">
+                        <i class="fas fa-download"></i> Експортувати сесію
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="reconnectAccount()">
+                        <i class="fas fa-sync-alt"></i> Перепідключити
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteAccount()">
+                        <i class="fas fa-trash"></i> Видалити акаунт
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/devices.js') }}"></script>
+
+<script>
+// Глобальні змінні
+let currentAccountId = null;
+let qrInterval = null;
+
+// Завантаження акаунтів при старті
+document.addEventListener('DOMContentLoaded', function() {
+    loadAccounts();
+    
+    // Обробники форм
+    setupFormHandlers();
+});
+
+function setupFormHandlers() {
+    // Phone form
+    document.getElementById('phoneForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        addAccountByPhone();
+    });
+    
+    // Tdata form
+    document.getElementById('tdataForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        addAccountByTdata();
+    });
+    
+    // Session form
+    document.getElementById('sessionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        addAccountBySession();
+    });
+}
+
+// Модальне вікно з QR кодом
+document.getElementById('qrModal').addEventListener('show.bs.modal', function() {
+    generateQRCode();
+});
+
+document.getElementById('qrModal').addEventListener('hide.bs.modal', function() {
+    if (qrInterval) {
+        clearInterval(qrInterval);
+        qrInterval = null;
+    }
+});
+
+function generateQRCode() {
+    const container = document.getElementById('qrCodeContainer');
+    container.innerHTML = '<div class="spinner-border text-primary" role="status"></div><p class="mt-2">Генерація QR коду...</p>';
+    
+    fetch('/api/devices/qr/generate')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                container.innerHTML = `<img src="${data.qr_image}" class="img-fluid" alt="QR Code">`;
+                
+                // Перевірка статусу кожні 3 секунди
+                qrInterval = setInterval(checkQRStatus, 3000);
+            } else {
+                container.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            container.innerHTML = `<div class="alert alert-danger">Помилка: ${error}</div>`;
+        });
+}
+
+function refreshQRCode() {
+    generateQRCode();
+}
+
+function checkQRStatus() {
+    const sessionId = document.querySelector('#qrModal').dataset.sessionId;
+    
+    if (!sessionId) return;
+    
+    fetch(`/api/devices/qr/check?session_id=${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            const statusDiv = document.getElementById('qrStatus');
+            
+            if (data.success) {
+                if (data.status === 'authorized') {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check"></i> Акаунт успішно підключено!
+                            <br><small>${data.account_data?.phone || 'Невідомий номер'}</small>
+                        </div>
+                    `;
+                    clearInterval(qrInterval);
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('qrModal')).hide();
+                        loadAccounts();
+                    }, 2000);
+                } else if (data.status === 'waiting') {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-clock"></i> Очікування сканування QR коду...
+                        </div>
+                    `;
+                } else if (data.status === 'expired') {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> QR код прострочено
+                        </div>
+                    `;
+                    clearInterval(qrInterval);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('QR check error:', error);
+        });
+}
+</script>
+
 {% endblock %}

