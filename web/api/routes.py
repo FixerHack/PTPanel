@@ -710,3 +710,41 @@ def api_stats():
         return jsonify({'success': False, 'error': str(e)})
     finally:
         db_session.close()
+
+@api_bp.route('/debug/config', methods=['GET'])
+def debug_config():
+    """Перевірка конфігурації"""
+    try:
+        from config import config
+        from core.config_manager import config_manager
+        
+        # Отримуємо конфігурацію з БД
+        telegram_config = config_manager.load_user_config(1, 'telegram')
+        
+        # Перевіряємо файл
+        file_path = "configs/users/admin/telegram.json"
+        file_exists = os.path.exists(file_path)
+        
+        # Зчитуємо файл якщо існує
+        file_content = None
+        if file_exists:
+            try:
+                with open(file_path, 'r') as f:
+                    file_content = json.load(f)
+            except:
+                pass
+        
+        return jsonify({
+            'config_from_db': telegram_config,
+            'config_from_env': {
+                'api_id': config.telegram.api_id,
+                'api_hash': config.telegram.api_hash[:10] + '...' if config.telegram.api_hash else None,
+                'phone': config.telegram.phone,
+                'bot_tokens_count': len(config.telegram.bot_tokens)
+            },
+            'file_exists': file_exists,
+            'file_content': file_content
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
