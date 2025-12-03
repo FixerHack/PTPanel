@@ -12,7 +12,6 @@ from datetime import datetime
 from core.database import db_manager
 from models.db_models import StolenFile, Account
 from core.qr_manager import qr_manager
-import qrcode
 
 # Створюємо blueprint для API
 api_bp = Blueprint('api', __name__)
